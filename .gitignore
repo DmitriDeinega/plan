@@ -7,4 +7,4 @@ __pycache__/
 
 # Virtual envs (in case you create one later)
 .venv/
-venv/
+venv/backend/.idea/
