@@ -1,0 +1,10 @@
+# Secrets (never commit)
+backend/app/.env
+
+# Python bytecode + caches
+__pycache__/
+*.py[cod]
+
+# Virtual envs (in case you create one later)
+.venv/
+venv/

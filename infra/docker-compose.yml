@@ -1,0 +1,28 @@
+name: plan
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: plan-mongo
+    restart: unless-stopped
+    volumes:
+      - plan_mongo_data:/data/db
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: plan-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "2100:2100"
+    env_file:
+      - ../backend/app/.env
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: plan_db
+
+volumes:
+  plan_mongo_data:

@@ -1,0 +1,3121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Plan</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <link rel="icon" href="/static/favicon.ico?v=1">
+
+  <style>
+    :root{
+      --bg0:#070A10;
+      --bg1:#0B1020;
+      --card: rgba(255,255,255,0.08);
+      --stroke: rgba(255,255,255,0.14);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.68);
+      --danger:#ff4d4d;
+      --ok:#2ef2a8;
+      --shadow: 0 16px 50px rgba(0,0,0,0.45);
+      --r22: 22px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --sticky-top: calc(64px + var(--safe-top));
+      --nav-h: 66px;
+
+      --ok-border: rgba(46,242,168,0.78);
+      --ok-glow: rgba(46,242,168,0.22);
+      --bad-border: rgba(255,77,77,0.78);
+      --bad-glow: rgba(255,77,77,0.22);
+    }
+
+    *{ box-sizing:border-box; }
+
+    html, body{
+      height:100%;
+      overflow:hidden;
+    }
+
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1100px 800px at 25% 20%, rgba(108,231,255,0.10), transparent 60%),
+        radial-gradient(900px 700px at 85% 30%, rgba(184,140,255,0.08), transparent 60%),
+        radial-gradient(900px 700px at 40% 90%, rgba(46,242,168,0.06), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      overflow-x:hidden;
+    }
+
+    .envSuffix{
+      margin-left: 6px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .35px;
+      opacity: .75;
+    }
+
+    .dayDot{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.10);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.20) inset;
+    }
+
+    .dayDot.open{
+      border-color: rgba(46,242,168,0.55);
+      background: rgba(46,242,168,0.90);
+      box-shadow:
+        0 0 0 2px rgba(46,242,168,0.16),
+        0 0 18px rgba(46,242,168,0.20);
+    }
+
+    .dayDot.closed{
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.18);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.22) inset;
+      opacity: 0.55;
+    }
+
+    .shell{
+      height:100%;
+      display:grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .contentScroll{
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-gutter: stable;
+      position: relative;
+    }
+
+    .contentScroll::-webkit-scrollbar{ width: 10px; height: 10px; }
+    .contentScroll::-webkit-scrollbar-track{ background: transparent; }
+    .contentScroll::-webkit-scrollbar-thumb{
+      background: transparent;
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+
+    .contentScroll:hover::-webkit-scrollbar-track{
+      background: rgba(255,255,255,0.03);
+      border-radius: 999px;
+    }
+    .contentScroll:hover::-webkit-scrollbar-thumb{
+      background: rgba(108,231,255,0.16);
+    }
+    .contentScroll:hover::-webkit-scrollbar-thumb:hover{
+      background: rgba(184,140,255,0.22);
+    }
+
+    .contentScroll{
+      scrollbar-width: thin;
+      scrollbar-color: rgba(108,231,255,0.16) transparent;
+    }
+
+    .topbar{
+      position: sticky;
+      top:0;
+      z-index:20;
+      padding: calc(10px + var(--safe-top)) 12px 10px;
+      backdrop-filter: blur(14px);
+      background: rgba(7,10,16,0.55);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .topbarInner{
+      max-width: 1180px;
+      margin:0 auto;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .brand{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      user-select:none;
+      cursor:pointer;
+      min-width: 160px;
+    }
+    .logo{
+      width:36px;height:36px;
+      border-radius: 12px;
+      background:
+        radial-gradient(18px 18px at 30% 30%, rgba(108,231,255,0.7), transparent 60%),
+        radial-gradient(20px 20px at 70% 70%, rgba(184,140,255,0.65), transparent 60%),
+        rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+    }
+    .brandTitle{
+      display:flex;
+      flex-direction:column;
+      line-height:1.05;
+    }
+    .brandTitle .t1{ font-weight:800; letter-spacing:0.2px; }
+    .brandTitle .t2{ font-size:12px; color:var(--muted); }
+
+    .content{
+      max-width: 1180px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 14px 12px calc(var(--nav-h) + var(--safe-bottom) + 14px);
+    }
+
+    .toastWrap{
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      pointer-events:none;
+      width: min(680px, calc(100% - 24px));
+    }
+    .toast{
+      pointer-events:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      border:1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+      opacity:0;
+      transform: translateY(-10px);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .toast.show{ opacity:1; transform: translateY(0); }
+    .toast.ok{ background: rgba(46,242,168,0.12); }
+    .toast.err{ background: rgba(255,77,77,0.12); }
+    .toast span{ color: var(--text); font-weight: 900; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .card{
+      border-radius: 22px;
+      background: rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+      overflow:hidden;
+    }
+    .card.dayCard{ overflow: visible; }
+
+    .cardHeader{
+      padding: 14px 14px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      border-radius: 24px 24px 0 0;
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.68);
+    }
+    .cardBody{ padding: 12px 14px 14px; }
+
+    .hr{ height:1px; background: rgba(255,255,255,0.08); margin: 0 0 12px; }
+
+    .iconBtn{
+      width:44px;height:44px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      user-select:none;
+      transition: transform 0.08s ease, background 0.2s ease;
+      flex: 0 0 auto;
+    }
+    .iconBtn:active{ transform: scale(0.98); }
+    .iconBtn[disabled]{ opacity:0.35; cursor:not-allowed; }
+
+    .bubble{
+      height: 64px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding: 12px 12px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.10);
+      white-space:nowrap;
+      flex: 0 0 auto;
+    }
+
+    .dateBubble{
+      min-width: 220px;
+      justify-content:center;
+    }
+    .dateInput{
+      width: 150px;
+      height: 44px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      padding: 0 12px;
+      outline:none;
+      font: inherit;
+      font-weight: 950;
+      text-align:center;
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .weightTitle{ display:flex; flex-direction:column; gap:4px; }
+    .weightTitle .t1{ font-weight: 950; letter-spacing: .2px; white-space:nowrap; }
+    .weightInputWrap{ display:flex; align-items:center; gap:10px; }
+    .weightInput{
+      width: 60px;
+      height: 44px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      padding: 0 12px;
+      outline:none;
+      font: inherit;
+      font-weight: 950;
+      text-align:center;
+      font-variant-numeric: tabular-nums;
+    }
+    .weightUnit{ color: rgba(255,255,255,0.68); font-weight: 800; user-select:none; white-space:nowrap; }
+
+    .mealCard{
+      border-radius: 22px;
+      background: rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.10);
+      overflow:hidden;
+    }
+    .mealTop{
+      padding: 12px 12px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      cursor:pointer;
+    }
+    .mealTop:hover{ background: rgba(255,255,255,0.05); }
+    .mealName{ font-weight: 950; font-size: 16px; letter-spacing: .2px; }
+
+    .mealTopRight{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .signBtn{
+      width:36px;
+      height:36px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      user-select:none;
+      transition: transform 0.08s ease, background 0.2s ease, border-color 0.2s ease;
+      font-weight: 980;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+    .signBtn:active{ transform: scale(0.98); }
+    .signBtn[disabled]{ opacity:0.45; cursor:not-allowed; }
+
+    .signBtn.signed{
+      border-color: rgba(46,242,168,0.45);
+      background: rgba(46,242,168,0.14);
+    }
+    .signBtn.derived{
+      border-color: rgba(108,231,255,0.35);
+      background: rgba(108,231,255,0.10);
+      opacity: 0.7;
+      cursor:not-allowed;
+    }
+
+    .collapseBtn{
+      width:36px;
+      height:36px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      user-select:none;
+      transition: transform .18s ease, background .2s ease;
+      font-weight: 980;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+    .collapseBtn:active{ transform: scale(0.98); }
+
+    .chartCard{
+      border-radius: 22px;
+      background: rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.10);
+      overflow:hidden;
+      padding: 12px;
+    }
+
+    .table{ width:100%; border-collapse: collapse; }
+    .table th, .table td{
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 10px;
+      font-size: 13px;
+      text-align:left;
+    }
+    .table th{
+      color: rgba(255,255,255,0.68);
+      font-weight: 900;
+      letter-spacing: .2px;
+      text-transform: uppercase;
+      font-size: 11px;
+      background: rgba(255,255,255,0.02);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      backdrop-filter: blur(8px);
+    }
+    .table th.num, .table td.num{ text-align:left; font-variant-numeric: tabular-nums; }
+
+    .table td .cellInput{
+      width:100%;
+      height: 40px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.92);
+      padding: 0 10px;
+      outline:none;
+      font: inherit;
+      font-weight: 900;
+      cursor: text;
+    }
+    .table td .cellInput[disabled]{ opacity:0.6; cursor:not-allowed; }
+    .table td .cellInput:focus{
+      border-color: rgba(108,231,255,0.35);
+      box-shadow: 0 0 0 1px rgba(108,231,255,0.12);
+    }
+
+    .sumRow td{
+      font-weight: 950;
+      color: rgba(255,255,255,0.92);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .summaryStack{ display:flex; flex-direction:column; gap:10px; padding-top: 12px; }
+
+    .view{ display:none; }
+    .view.active{ display:block; }
+
+    .nav{
+      position: fixed;
+      left:0; right:0; bottom:0;
+      padding: 10px 12px calc(10px + var(--safe-bottom));
+      background: rgba(7,10,16,0.58);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(255,255,255,0.10);
+      z-index: 30;
+      height: 66px;
+    }
+    .navInner{
+      max-width: 1180px;
+      margin:0 auto;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .navBtn{
+      flex:1;
+      height: 46px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.68);
+      cursor:pointer;
+      font: inherit;
+      font-weight: 950;
+      letter-spacing: .2px;
+      transition: background .2s ease, color .2s ease, transform .08s ease;
+    }
+    .navBtn:active{ transform: scale(0.99); }
+    .navBtn.active{
+      color: rgba(0,0,0,0.90);
+      border-color: rgba(108,231,255,0.30);
+      background: linear-gradient(135deg, rgba(108,231,255,0.95), rgba(184,140,255,0.90));
+    }
+
+    .hidden{ display:none !important; }
+
+    .errorCard{
+      border-radius: 22px;
+      background: rgba(255,77,77,0.10);
+      border: 1px solid rgba(255,77,77,0.35);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+      overflow: hidden;
+    }
+    .errorHead{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .errorHead .t{
+      margin:0;
+      font-size: 14px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      font-weight: 950;
+    }
+    .errorBody{
+      height: 250px;
+      padding: 12px 14px 14px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .errorMsg{
+      color: rgba(255,255,255,0.92);
+      font-weight: 900;
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+    .retryBtn{
+      width: 100%;
+      height: 46px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.92);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 950;
+      letter-spacing: .2px;
+      margin-top: auto;
+      margin-bottom: 2px;
+    }
+    .retryBtn:active{ transform: scale(0.99); }
+
+    .stickyPanel{
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      background: rgba(11,16,32,0.86);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 22px;
+      padding: 12px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+      margin-bottom: 12px;
+      transition: border-radius .1s ease, box-shadow .1s ease, background .1s ease, border-color .1s ease;
+      will-change: border-radius;
+    }
+
+    .stickyPanel.is-stuck{
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      border-top-color: transparent;
+    }
+
+    .stickyPanel.noTrans{
+      transition: none !important;
+    }
+
+    .dayHeaderRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:nowrap;
+      overflow-x:auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .dayHeaderRow::-webkit-scrollbar{ display:none; }
+
+    .dayHeaderLeft{ display:flex; align-items:center; gap:10px; flex: 0 0 auto; }
+    .dayHeaderRight{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
+      flex: 0 0 auto;
+      justify-content:flex-end;
+    }
+
+    .sumBubble{
+      height: 64px;
+      padding: 10px 12px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.10);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:4px;
+      min-width: 160px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.30);
+    }
+    .sumLine{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      font-variant-numeric: tabular-nums;
+      line-height:1.0;
+    }
+    .sumLine .k{
+      font-size: 11px;
+      color: rgba(255,255,255,0.68);
+      text-transform: uppercase;
+      letter-spacing: .35px;
+      font-weight: 900;
+    }
+    .sumLine .v{
+      font-size: 14px;
+      font-weight: 980;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .sumBubble.ok{ border: 2px solid var(--ok-border); }
+    .sumBubble.bad{ border: 2px solid var(--bad-border); }
+
+    .fabDock{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(66px + var(--safe-bottom) + 12px);
+      z-index: 35;
+      pointer-events: none;
+    }
+    .fabDockInner{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 12px;
+      display:flex;
+      justify-content:flex-end;
+    }
+    .fabStack{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      pointer-events: auto;
+      align-items:flex-end;
+      padding-right: 15px;
+    }
+    .fabBtn{
+      height: 46px;
+      min-width: 90px;
+      width: auto;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 980;
+      letter-spacing: .2px;
+      user-select:none;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+      color: rgba(0,0,0,0.92);
+      background: linear-gradient(135deg, rgba(46,242,168,0.95), rgba(108,231,255,0.90));
+    }
+    .fabBtn:active{ transform: scale(0.99); }
+
+    @media (max-width: 900px){
+      .dayHeaderRow{ flex-wrap: wrap; overflow-x: visible; }
+
+      .dayHeaderLeft{
+        order: 1;
+        flex: 1 1 100%;
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      #dateBubble{ flex: 0 0 auto; }
+      #weightBubble{ flex: 0 0 auto; margin-left: auto; }
+
+      .dayHeaderRight{
+        order: 2;
+        flex: 1 1 100%;
+        width: 100%;
+        margin-left: 0;
+        justify-content: stretch;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .dayHeaderRight .sumBubble{
+        width: 100%;
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 620px){
+      .dayHeaderRight{ grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px){
+      .dayHeaderLeft{
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+
+      #dateBubble{ flex: 1 1 100%; }
+
+      #weightBubble{
+        flex: 1 1 100%;
+        justify-content: center;
+      }
+
+      #weightBubble .weightInputWrap{ justify-content: center; }
+    }
+
+    @media (max-width: 640px){
+      .fabDockInner{ justify-content:flex-end; }
+      .fabStack{ width:auto; align-items:flex-end; }
+      .fabBtn{ width:auto; min-width:90px; }
+    }
+
+    .settingsGrid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 820px){
+      .settingsGrid{ grid-template-columns: 1fr; }
+    }
+
+    .metric{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 14px;
+      padding: 14px 14px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .metricTitle{
+      margin:0;
+      color: rgba(255,255,255,0.68);
+      font-weight: 900;
+      letter-spacing: .35px;
+      text-transform: uppercase;
+      font-size: 11px;
+      line-height: 1.1;
+    }
+
+    .metricValue{
+      margin:0;
+      font-weight: 980;
+      font-size: 16px;
+      color: rgba(255,255,255,0.92);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      text-align: right;
+      min-width: 72px;
+    }
+
+    .mealBodyDay{
+      overflow: hidden;
+      max-height: 520px;
+      transition: max-height .18s ease, opacity .18s ease;
+      opacity: 1;
+    }
+
+    .mealBodyFoods{
+      max-height: min(66vh, 520px);
+      overflow: auto;
+      transition: max-height .18s ease, opacity .18s ease;
+      opacity: 1;
+
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable both-edges;
+
+      padding: 0;
+      border-top: 0;
+      background: transparent;
+    }
+
+    .foodsInner{
+      padding: 8px;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      box-sizing: border-box;
+    }
+
+    .mealBodyFoods .table{
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .mealBodyFoods .table th{
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+
+    .mealBodyFoods .table td,
+    .mealBodyFoods .table th{
+      background: rgba(255,255,255,0.02);
+    }
+
+    .mealBodyFoods .cellInput{
+      background: rgba(255,255,255,0.045);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .mealBodyFoods .cellInput:focus{
+      border-color: rgba(108,231,255,0.35);
+    }
+
+    .mealBodyFoods::-webkit-scrollbar{ width: 10px; height: 10px; }
+    .mealBodyFoods::-webkit-scrollbar-track{
+      background: rgba(255,255,255,0.03);
+      border-radius: 999px;
+    }
+    .mealBodyFoods::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0);
+      background-clip: padding-box;
+    }
+    .mealBodyFoods::-webkit-scrollbar-thumb:hover{
+      background: rgba(255,255,255,0.28);
+      border: 2px solid rgba(0,0,0,0);
+      background-clip: padding-box;
+    }
+
+    .mealBodyFoods{
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.22) rgba(255,255,255,0.04);
+    }
+
+    @media (max-width: 640px){
+      .mealBodyFoods{ max-height: 58vh; }
+    }
+
+    .mealCard.animating .mealBodyFoods{ overflow: hidden !important; }
+
+    .mealCard.collapsed .mealBodyDay,
+    .mealCard.collapsed .mealBodyFoods{
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      padding: 0;
+      border-top: 0;
+      background: transparent;
+    }
+
+    .mealCard.collapsed .mealTop{ border-bottom: 0; }
+
+    .mealCard.collapsed .foodsInner{
+      padding: 0;
+      border-top: 0;
+    }
+
+    .acMenu{
+      position: fixed;
+      z-index: 99999;
+      width: 320px;
+      max-height: min(360px, 46vh);
+      overflow: auto;
+      background: rgba(15,18,30,0.96);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+      backdrop-filter: blur(14px);
+      border-radius: 16px;
+      padding: 6px;
+      display:none;
+    }
+    .acItem{
+      padding: 10px 10px;
+      border-radius: 12px;
+      font-weight: 900;
+      color: rgba(255,255,255,0.92);
+      cursor: pointer;
+      user-select: none;
+      line-height: 1.15;
+    }
+    .acItem:hover{ background: rgba(255,255,255,0.06); }
+    .acItem.active{ background: rgba(108,231,255,0.18); }
+
+    .acMenu::-webkit-scrollbar{ width: 10px; height: 10px; }
+    .acMenu::-webkit-scrollbar-track{
+      background: rgba(255,255,255,0.03);
+      border-radius: 999px;
+    }
+    .acMenu::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0);
+      background-clip: padding-box;
+    }
+    .acMenu::-webkit-scrollbar-thumb:hover{
+      background: rgba(255,255,255,0.28);
+    }
+
+    /* Flatpickr styling (unchanged from your original) */
+    .flatpickr-calendar{
+      background: rgba(15,18,30,0.965);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 22px 70px rgba(0,0,0,0.55);
+      backdrop-filter: blur(16px);
+      border-radius: 18px;
+      z-index: 99999;
+      overflow: visible;
+      width: 352px;
+      max-width: calc(100vw - 16px);
+      padding: 10px 12px 12px;
+      box-sizing: border-box;
+    }
+    .flatpickr-innerContainer,
+    .flatpickr-rContainer,
+    .flatpickr-days,
+    .dayContainer{
+      width: 100% !important;
+      min-width: 100% !important;
+      max-width: 100% !important;
+      overflow: visible !important;
+      box-sizing: border-box;
+    }
+    .flatpickr-months{
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+
+      display:flex !important;
+      align-items:center !important;
+      justify-content:space-between !important;
+      gap: 10px !important;
+    }
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month{
+      position: relative !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      padding: 8px !important;
+      border-radius: 12px;
+      color: rgba(255,255,255,0.92) !important;
+      fill: rgba(255,255,255,0.92) !important;
+    }
+    .flatpickr-months .flatpickr-prev-month:hover,
+    .flatpickr-months .flatpickr-next-month:hover{
+      background: rgba(255,255,255,0.06);
+    }
+    .flatpickr-months .flatpickr-prev-month svg,
+    .flatpickr-months .flatpickr-next-month svg{
+      fill: rgba(255,255,255,0.92) !important;
+    }
+    .flatpickr-current-month{
+      position: relative !important;
+      top: 0 !important;
+      left: 0 !important;
+      transform: none !important;
+
+      color: rgba(255,255,255,0.92) !important;
+      font-weight: 950;
+      letter-spacing: .2px;
+
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 8px !important;
+      padding: 0 !important;
+      line-height: 1 !important;
+      height: auto !important;
+    }
+    .flatpickr-current-month .cur-month{
+      color: rgba(255,255,255,0.92) !important;
+      font-weight: 950 !important;
+      line-height: 1 !important;
+    }
+    .flatpickr-current-month input.cur-year{
+      color: rgba(255,255,255,0.92) !important;
+      font-weight: 950 !important;
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 10px !important;
+      padding: 2px 10px !important;
+      outline: none !important;
+      box-shadow: none !important;
+      height: 28px !important;
+      line-height: 1 !important;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months{
+      color: rgba(255,255,255,0.92) !important;
+      font-weight: 950 !important;
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 10px !important;
+      padding: 2px 10px !important;
+      outline: none !important;
+      height: 28px !important;
+      line-height: 1 !important;
+      -webkit-appearance: none;
+      appearance: none;
+      width: 10.5ch !important;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months option{
+      background: rgba(15,18,30,0.98);
+      color: rgba(255,255,255,0.92);
+    }
+    .flatpickr-weekdays{
+      background: transparent;
+      border: 0;
+      margin-bottom: 4px;
+    }
+    .flatpickr-weekday{
+      color: rgba(255,255,255,0.90) !important;
+      font-weight: 900;
+      letter-spacing: .35px;
+      text-transform: uppercase;
+      font-size: 11px;
+      padding: 10px 0;
+    }
+    .flatpickr-days{ border-radius: 14px; }
+    .flatpickr-day{
+      color: rgba(255,255,255,0.92);
+      border-radius: 12px;
+      font-weight: 850;
+      height: 40px;
+      line-height: 40px;
+      margin: 2px;
+    }
+    .flatpickr-day:hover{
+      background: rgba(108,231,255,0.16);
+      border-color: transparent;
+    }
+    .flatpickr-day.today{
+      border-color: rgba(184,140,255,0.60);
+      box-shadow: 0 0 0 1px rgba(184,140,255,0.25) inset;
+    }
+    .flatpickr-day.selected,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange{
+      background: linear-gradient(135deg, rgba(108,231,255,0.95), rgba(184,140,255,0.90));
+      color: rgba(0,0,0,0.92);
+      border-color: transparent;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    .flatpickr-day.inRange{
+      background: rgba(108,231,255,0.12);
+      border-color: transparent;
+    }
+    .flatpickr-day.prevMonthDay,
+    .flatpickr-day.nextMonthDay{
+      color: rgba(255,255,255,0.35);
+    }
+    .flatpickr-day.flatpickr-disabled,
+    .flatpickr-day.flatpickr-disabled:hover{
+      color: rgba(255,255,255,0.22);
+      background: transparent;
+      cursor: not-allowed;
+    }
+    .flatpickr-calendar:before,
+    .flatpickr-calendar:after{ display:none; }
+    .flatpickr-months .flatpickr-month{ display: flex !important; overflow: visible; }
+    .flatpickr-months .flatpickr-prev-month.flatpickr-disabled,
+    .flatpickr-months .flatpickr-next-month.flatpickr-disabled{
+      display: block !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      opacity: 0 !important;
+    }
+    .flatpickr-monthDropdown-months,
+    .flatpickr-monthDropdown-months option{
+      background: rgba(15,18,30,0.98) !important;
+      color: rgba(255,255,255,0.92) !important;
+    }
+    .flatpickr-current-month .numInputWrapper span.arrowUp:after{
+      border-bottom-color: rgba(255,255,255,0.92) !important;
+    }
+    .flatpickr-current-month .numInputWrapper span.arrowDown:after{
+      border-top-color: rgba(255,255,255,0.92) !important;
+    }
+    .flatpickr-current-month .numInputWrapper span.arrowUp,
+    .flatpickr-current-month .numInputWrapper span.arrowDown{ opacity: 1 !important; }
+    .flatpickr-current-month .numInputWrapper span.fp-hide{
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="toastWrap" id="toastWrap"></div>
+
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbarInner">
+        <div class="brand">
+          <img class="logo" src="/static/favicon.ico" alt="Plan"/>
+          <div class="brandTitle">
+            <div class="t1">Plan<span class="envSuffix"><!--ENV_SUFFIX--></span></div>
+            <div class="t2"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="contentScroll" id="contentScroll">
+      <main class="content">
+        <section class="view active" id="viewDay">
+          <div id="DayOk">
+            <div class="grid">
+              <div class="card dayCard">
+                <div class="cardHeader">
+                  <h2>Day</h2>
+                  <div class="dayDot" id="dayDot" title="Day status"></div>
+                </div>
+
+                <div class="cardBody">
+                  <div class="stickyPanel" id="dayStickyPanel">
+                    <div class="dayHeaderRow">
+                      <div class="dayHeaderLeft">
+                        <div class="bubble dateBubble" id="dateBubble">
+                          <button class="iconBtn" id="dayBack" aria-label="Previous day" type="button">‹</button>
+                          <input id="dateInput" class="dateInput" type="text" inputmode="none" readonly />
+                          <button class="iconBtn" id="dayForward" aria-label="Next day" type="button">›</button>
+                        </div>
+
+                        <div class="bubble" id="weightBubble">
+                          <div class="weightTitle"><div class="t1">Weight</div></div>
+                          <div class="weightInputWrap">
+                            <input class="weightInput" id="weightInput" inputmode="decimal" placeholder="0" />
+                            <div class="weightUnit">kg</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="dayHeaderRight">
+                        <div class="sumBubble" id="miniProtein">
+                          <div class="sumLine"><span class="k">Protein</span><span class="v" id="sumProtein">0</span></div>
+                          <div class="sumLine"><span class="k">Need</span><span class="v" id="needProtein">0</span></div>
+                          <div class="sumLine"><span class="k">Left</span><span class="v" id="leftProtein">0</span></div>
+                        </div>
+
+                        <div class="sumBubble" id="miniFat">
+                          <div class="sumLine"><span class="k">Fat Cal</span><span class="v" id="sumFatCal">0</span></div>
+                          <div class="sumLine"><span class="k">Need</span><span class="v" id="needFatCal">0</span></div>
+                          <div class="sumLine"><span class="k">Left</span><span class="v" id="leftFatCal">0</span></div>
+                        </div>
+
+                        <div class="sumBubble" id="miniCalories">
+                          <div class="sumLine"><span class="k">Calories</span><span class="v" id="sumCalories">0</span></div>
+                          <div class="sumLine"><span class="k">Need</span><span class="v" id="needCalories">0</span></div>
+                          <div class="sumLine"><span class="k">Left</span><span class="v" id="leftCalories">0</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="hr"></div>
+                  <div id="mealsWrap" class="summaryStack"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="DayErr" class="hidden"></div>
+        </section>
+
+        <section class="view" id="viewFoods">
+          <div id="FoodsOk">
+            <div class="card">
+              <div class="cardHeader">
+                <h2>Foods</h2>
+                <span style="opacity:.0;">.</span>
+              </div>
+              <div class="cardBody">
+                <div id="foodsEditor"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="FoodsErr" class="hidden"></div>
+        </section>
+
+        <section class="view" id="viewWeights">
+          <div id="WeightsOk">
+            <div class="card">
+              <div class="cardHeader">
+                <h2>Weights</h2>
+              </div>
+              <div class="cardBody">
+                <div class="chartCard"><canvas id="chartDaily"></canvas></div>
+                <div class="hr" style="margin:12px 0;"></div>
+                <div class="chartCard"><canvas id="chartWeeklyAvg"></canvas></div>
+                <div class="hr" style="margin:12px 0;"></div>
+                <div class="chartCard"><canvas id="chartWeeklyReduction"></canvas></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="WeightsErr" class="hidden"></div>
+        </section>
+
+        <section class="view" id="viewSettings">
+          <div id="SettingsOk">
+            <div class="settingsGrid">
+              <div class="card">
+                <div class="cardHeader"><h2>Daily</h2></div>
+                <div class="cardBody">
+                  <div class="summaryStack">
+                    <div class="metric">
+                      <p class="metricTitle">Calories offset</p>
+                      <p class="metricValue"><span id="setDailyCalories">0</span></p>
+                    </div>
+                    <div class="metric">
+                      <p class="metricTitle">Fat</p>
+                      <p class="metricValue"><span id="setDailyFat">0</span></p>
+                    </div>
+                    <div class="metric">
+                      <p class="metricTitle">Protein per kg</p>
+                      <p class="metricValue"><span id="setDailyProtein">0</span></p>
+                    </div>
+                    <div class="metric">
+                      <p class="metricTitle">TDEE multiplier</p>
+                      <p class="metricValue"><span id="setTdee">0</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="cardHeader"><h2>Person</h2></div>
+                <div class="cardBody">
+                  <div class="summaryStack">
+                    <div class="metric">
+                      <p class="metricTitle">Birth day</p>
+                      <p class="metricValue"><span id="setBirth">-</span></p>
+                    </div>
+                    <div class="metric">
+                      <p class="metricTitle">Gender</p>
+                      <p class="metricValue"><span id="setGender">-</span></p>
+                    </div>
+                    <div class="metric">
+                      <p class="metricTitle">Height</p>
+                      <p class="metricValue"><span id="setHeight">-</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="SettingsErr" class="hidden"></div>
+        </section>
+      </main>
+    </div>
+
+    <nav class="nav">
+      <div class="navInner">
+        <button class="navBtn active" data-view="Day" type="button">Day</button>
+        <button class="navBtn" data-view="Foods" type="button">Foods</button>
+        <button class="navBtn" data-view="Weights" type="button">Weights</button>
+        <button class="navBtn" data-view="Settings" type="button">Settings</button>
+      </div>
+    </nav>
+
+    <div class="fabDock" id="fabDock">
+      <div class="fabDockInner">
+        <div class="fabStack hidden" id="fabDay">
+          <button class="fabBtn" id="revertBtn" type="button">Revert</button>
+          <button class="fabBtn" id="endBtn" type="button">End</button>
+          <button class="fabBtn" id="saveDayBtn" type="button">Save</button>
+        </div>
+
+        <div class="fabStack hidden" id="fabFoods">
+          <button class="fabBtn" id="saveFoodsBtn" type="button">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="acMenu" id="acMenu"></div>
+
+  <script>
+    const APP_BASE_PATH = "<!--APP_BASE_PATH-->";
+
+    const $ = (q, el=document) => el.querySelector(q);
+    const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+
+    let activeViewName = "Day";
+
+    function toast(kind, msg){
+      const wrap = $("#toastWrap");
+      const div = document.createElement("div");
+      div.className = `toast ${kind}`;
+      div.innerHTML = `<span>${escapeHtml(msg)}</span>`;
+      wrap.appendChild(div);
+      requestAnimationFrame(() => div.classList.add("show"));
+      setTimeout(() => {
+        div.classList.remove("show");
+        setTimeout(() => div.remove(), 250);
+      }, 2400);
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+    }
+
+    function round2(n){
+      return Math.round((n + Number.EPSILON) * 100) / 100;
+    }
+
+    function ddmmyyyyFromDateObj(d){
+      const dd = String(d.getDate()).padStart(2,"0");
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const yyyy = String(d.getFullYear());
+      return `${dd}${mm}${yyyy}`;
+    }
+
+    function dateInputFromDdmmyyyy(ddmmyyyy){
+      const d = ddmmyyyy.slice(0,2);
+      const m = ddmmyyyy.slice(2,4);
+      const y = ddmmyyyy.slice(4,8);
+      return `${d}/${m}/${y}`;
+    }
+
+    function parseDdmmyyyy(ddmmyyyy){
+      const d = Number(ddmmyyyy.slice(0,2));
+      const m = Number(ddmmyyyy.slice(2,4)) - 1;
+      const y = Number(ddmmyyyy.slice(4,8));
+      return new Date(y,m,d);
+    }
+
+    function todayDdmmyyyy(){
+      const d = new Date();
+      const dd = String(d.getDate()).padStart(2,"0");
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const yyyy = String(d.getFullYear());
+      return `${dd}${mm}${yyyy}`;
+    }
+
+    function tomorrowDdmmyyyy(){
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      const dd = String(d.getDate()).padStart(2,"0");
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const yyyy = String(d.getFullYear());
+      return `${dd}${mm}${yyyy}`;
+    }
+
+    function viewIds(viewName){
+      return { ok: `#${viewName}Ok`, err: `#${viewName}Err` };
+    }
+
+    function clearViewError(viewName){
+      const ids = viewIds(viewName);
+      const ok = $(ids.ok);
+      const err = $(ids.err);
+      if (err){
+        err.classList.add("hidden");
+        err.innerHTML = "";
+      }
+      if (ok) ok.classList.remove("hidden");
+    }
+
+    function showViewError(viewName, title, msg, retryFn){
+      const ids = viewIds(viewName);
+      const ok = $(ids.ok);
+      const err = $(ids.err);
+
+      if (ok) ok.classList.add("hidden");
+      if (!err) return;
+
+      err.classList.remove("hidden");
+      err.innerHTML = `
+        <div class="grid">
+          <div class="errorCard">
+            <div class="errorHead">
+              <div class="t">${escapeHtml(title || "Error")}</div>
+            </div>
+            <div class="errorBody">
+              <div class="errorMsg">${escapeHtml(msg || "Failed")}</div>
+              <button class="retryBtn" type="button" id="${viewName}RetryBtn">Retry</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const btn = $(`#${viewName}RetryBtn`);
+      if (btn){
+        btn.onclick = null;
+        btn.onclick = () => retryFn && retryFn();
+      }
+    }
+
+    function showErrorOnActiveView(title, msg, retryFn){
+      showViewError(activeViewName, title, msg, retryFn);
+    }
+
+    function withTimeout(ms){
+      const c = new AbortController();
+      const t = setTimeout(() => c.abort(new Error("Request timeout")), ms);
+      return { signal: c.signal, cancel: () => clearTimeout(t) };
+    }
+
+    async function fetchJson(path, { method="GET", body=null, timeoutMs=12000, signal=null } = {}){
+      const t = withTimeout(timeoutMs);
+
+      let mergedSignal = t.signal;
+      if (signal){
+        const ctrl = new AbortController();
+        const onAbort = () => ctrl.abort(signal.reason || new Error("Aborted"));
+        signal.addEventListener("abort", onAbort, { once:true });
+        t.signal.addEventListener("abort", () => ctrl.abort(t.signal.reason), { once:true });
+        mergedSignal = ctrl.signal;
+      }
+
+      try{
+        const r = await fetch(APP_BASE_PATH + path, {
+          method,
+          headers:{ "Content-Type":"application/json" },
+          body: body ? JSON.stringify(body) : null,
+          signal: mergedSignal
+        });
+
+        const text = await r.text();
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; }
+        catch { throw new Error("Bad JSON from server"); }
+
+        if (!r.ok){
+          const msg = (json && json.errorMessage) ? json.errorMessage : `HTTP ${r.status}`;
+          throw new Error(msg);
+        }
+
+        if (!json || typeof json !== "object"){
+          throw new Error("Empty response from server");
+        }
+
+        if ("status" in json && json.status !== "SUCCESS"){
+          throw new Error(json.errorMessage || "Server returned failure");
+        }
+
+        return json;
+      } finally {
+        t.cancel();
+      }
+    }
+
+    async function apiGet(path){ return await fetchJson(path, { method:"GET" }); }
+    async function apiPost(path, body){ return await fetchJson(path, { method:"POST", body }); }
+    async function apiPut(path, body){ return await fetchJson(path, { method:"PUT", body }); }
+    async function apiPatch(path, body){ return await fetchJson(path, { method:"PATCH", body }); }
+
+    let foodsMap = {};
+    let foodsCombo = [];
+    let fruitsCombo = [];
+    let nutsCombo = [];
+    let vegetablesCombo = [];
+
+    let groups = {};
+    let settings = null;
+
+    let startDateDdmmyyyy = "";
+    let startDateObj = null;
+    let openDayObj = null;
+
+    let currentDayDdmmyyyy = "";
+    let currentDayDayClosed = false;
+
+    let currentDayTemplate = null;
+
+    let mealClosedState = {};
+
+    let chartDaily = null;
+    let chartWeeklyAvg = null;
+    let chartWeeklyRed = null;
+
+    let fp = null;
+    let mealUiState = { date: "", collapsed: {} };
+
+    let stickyIO = null;
+    let stickySentinel = null;
+
+    let dayLoadSeq = 0;
+    let dayLoadAbort = null;
+
+    function forceResponsiveReflow(){
+      requestAnimationFrame(() => {
+        if (fp && fp.redraw) fp.redraw();
+        if (chartDaily) chartDaily.resize();
+        if (chartWeeklyAvg) chartWeeklyAvg.resize();
+        if (chartWeeklyRed) chartWeeklyRed.resize();
+      });
+    }
+
+    function validateDayShape(day){
+      if (!day || typeof day !== "object") throw new Error("Invalid day payload");
+      if (!Array.isArray(day.meals)) throw new Error("Invalid meals payload");
+      return true;
+    }
+
+    const ac = {
+      menu: null,
+      input: null,
+      items: [],
+      activeIndex: -1,
+      lastRenderKey: "",
+      closeTimer: null
+    };
+
+    function acInit(){
+      ac.menu = $("#acMenu");
+      document.addEventListener("mousedown", (e) => {
+        if (!ac.menu) return;
+        if (ac.menu.contains(e.target)) return;
+        if (ac.input && ac.input.contains && ac.input.contains(e.target)) return;
+        acHide();
+      });
+      window.addEventListener("resize", () => acReposition());
+    }
+
+    function acGetOptions(kind){
+      if (kind === "FRUITS") return fruitsCombo;
+      if (kind === "NUTS") return nutsCombo;
+      if (kind === "VEGETABLES") return vegetablesCombo;
+      return foodsCombo;
+    }
+
+    function acShowFor(input, kind, filterText){
+      if (!ac.menu) return;
+      ac.input = input;
+
+      clearTimeout(ac.closeTimer);
+      ac.closeTimer = null;
+
+      const all = acGetOptions(kind);
+      const q = String(filterText || "").trim().toUpperCase();
+
+      let items = all;
+      if (q){
+        items = all.filter(x => String(x).toUpperCase().includes(q));
+      }
+
+      items = items.slice(0, 200);
+
+      const key = kind + "|" + q + "|" + items.length;
+      if (key !== ac.lastRenderKey){
+        ac.lastRenderKey = key;
+        ac.items = items;
+        ac.activeIndex = items.length ? 0 : -1;
+
+        ac.menu.innerHTML = items.length
+          ? items.map((t, i) => `<div class="acItem ${i===0 ? "active":""}" data-i="${i}">${escapeHtml(t)}</div>`).join("")
+          : `<div class="acItem" style="opacity:.65; cursor:default;">No matches</div>`;
+
+        $$(".acItem[data-i]", ac.menu).forEach(el => {
+          el.addEventListener("mouseenter", () => {
+            const i = Number(el.dataset.i);
+            acSetActive(i);
+          });
+          el.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const i = Number(el.dataset.i);
+            acPick(i);
+          });
+        });
+      }
+
+      acReposition();
+      ac.menu.style.display = "block";
+    }
+
+    function acReposition(){
+      if (!ac.menu || !ac.input) return;
+      if (ac.menu.style.display !== "block") return;
+
+      const r = ac.input.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const left = Math.max(8, Math.min(r.left, vw - 8 - r.width));
+
+      ac.menu.style.left = left + "px";
+      ac.menu.style.top = Math.min(window.innerHeight - 12, r.bottom + 6) + "px";
+      ac.menu.style.width = Math.max(220, r.width) + "px";
+    }
+
+    function acHide(){
+      if (!ac.menu) return;
+      ac.menu.style.display = "none";
+      ac.input = null;
+      ac.items = [];
+      ac.activeIndex = -1;
+      ac.lastRenderKey = "";
+    }
+
+    function acSetActive(i){
+      ac.activeIndex = i;
+      $$(".acItem[data-i]", ac.menu).forEach(el => el.classList.toggle("active", Number(el.dataset.i) === i));
+
+      const activeEl = $(`.acItem[data-i="${i}"]`, ac.menu);
+      if (activeEl){
+        const top = activeEl.offsetTop;
+        const bottom = top + activeEl.offsetHeight;
+        const viewTop = ac.menu.scrollTop;
+        const viewBottom = viewTop + ac.menu.clientHeight;
+        if (top < viewTop) ac.menu.scrollTop = top;
+        else if (bottom > viewBottom) ac.menu.scrollTop = bottom - ac.menu.clientHeight;
+      }
+    }
+
+    function acPick(i){
+      if (!ac.input) return;
+      if (i < 0 || i >= ac.items.length) return;
+
+      ac.input.value = ac.items[i];
+      ac.input.dispatchEvent(new Event("input", { bubbles:true }));
+      ac.input.dispatchEvent(new Event("change", { bubbles:true }));
+      acHide();
+    }
+
+    function attachAutocomplete(input, kind){
+      if (!input) return;
+      if (input.__acBound) return;
+      input.__acBound = true;
+
+      input.addEventListener("focus", () => {
+        if (input.disabled) return;
+        clearTimeout(ac.closeTimer);
+        ac.closeTimer = null;
+        acShowFor(input, kind, input.value);
+      });
+
+      input.addEventListener("click", () => {
+        if (input.disabled) return;
+        clearTimeout(ac.closeTimer);
+        ac.closeTimer = null;
+        acShowFor(input, kind, input.value);
+      });
+
+      input.addEventListener("input", () => {
+        if (input.disabled) return;
+        acShowFor(input, kind, input.value);
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (!ac.menu || ac.menu.style.display !== "block") return;
+
+        if (e.key === "ArrowDown"){
+          e.preventDefault();
+          if (ac.items.length) acSetActive(Math.min(ac.items.length - 1, ac.activeIndex + 1));
+        } else if (e.key === "ArrowUp"){
+          e.preventDefault();
+          if (ac.items.length) acSetActive(Math.max(0, ac.activeIndex - 1));
+        } else if (e.key === "Enter"){
+          if (ac.activeIndex >= 0){
+            e.preventDefault();
+            acPick(ac.activeIndex);
+          }
+        } else if (e.key === "Escape"){
+          e.preventDefault();
+          acHide();
+        }
+      });
+
+      input.addEventListener("blur", () => {
+        clearTimeout(ac.closeTimer);
+        ac.closeTimer = setTimeout(() => acHide(), 120);
+      });
+    }
+
+    function snapshotMealCollapse(){
+      const m = {};
+      $$("#viewDay .mealCard").forEach(card => {
+        const name = card.dataset.meal;
+        if (name) m[name] = card.classList.contains("collapsed");
+      });
+      mealUiState = { date: currentDayDdmmyyyy, collapsed: m };
+    }
+
+    function initialCollapsedForMeal(mealName, locked){
+      if (mealUiState.date === currentDayDdmmyyyy && (mealName in mealUiState.collapsed)){
+        return !!mealUiState.collapsed[mealName];
+      }
+      return !!locked;
+    }
+
+    function wireCollapse(card){
+      const btn = card.querySelector("[data-collapse-btn]");
+      const header = card.querySelector(".mealTop");
+      const body = card.querySelector(".mealBodyDay, .mealBodyFoods");
+      if (!header || !body) return;
+
+      function sync(){
+        const collapsed = card.classList.contains("collapsed");
+        if (btn){
+          btn.textContent = collapsed ? "▸" : "▾";
+          btn.setAttribute("aria-label", collapsed ? "Expand" : "Collapse");
+        }
+      }
+
+      function toggle(){
+        card.classList.add("animating");
+        card.classList.toggle("collapsed");
+        sync();
+
+        const done = () => {
+          card.classList.remove("animating");
+          body.removeEventListener("transitionend", done);
+          requestAnimationFrame(() => forceResponsiveReflow());
+        };
+        body.addEventListener("transitionend", done);
+      }
+
+      header.addEventListener("click", (e) => {
+        if (e.target && e.target.closest && e.target.closest("[data-collapse-btn]")) return;
+        if (e.target && e.target.closest && e.target.closest("[data-sign-btn]")) return;
+        toggle();
+      });
+
+      if (btn){
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggle();
+        });
+      }
+
+      const init = card.dataset.initCollapsed;
+      if (init === "1") card.classList.add("collapsed");
+      if (init === "0") card.classList.remove("collapsed");
+      sync();
+    }
+
+    function setNavButtons(){
+      const cur = parseDdmmyyyy(currentDayDdmmyyyy).getTime();
+
+      $("#dayBack").disabled = (cur <= startDateObj.getTime());
+      $("#dayForward").disabled = (cur >= openDayObj.getTime());
+    }
+
+    function initOrUpdateDatePicker(){
+      if (!startDateObj || !openDayObj || !currentDayDdmmyyyy) return;
+
+      const currentObj = parseDdmmyyyy(currentDayDdmmyyyy);
+      if (!fp){
+        fp = flatpickr("#dateInput", {
+          dateFormat: "d/m/Y",
+          defaultDate: currentObj,
+
+          minDate: startDateObj,
+          maxDate: openDayObj,
+          disableMobile: true,
+          clickOpens: false,
+          allowInput: false,
+          monthSelectorType: "dropdown",
+          appendTo: document.body,
+          position: "below left",
+
+          onReady: (selectedDates, dateStr, inst) => {
+            $("#dateInput").value = dateInputFromDdmmyyyy(currentDayDdmmyyyy);
+
+            const yearInput = inst.calendarContainer.querySelector(".cur-year");
+            if (yearInput) {
+              yearInput.setAttribute("readonly", "readonly");
+              yearInput.setAttribute("inputmode", "none");
+              yearInput.style.pointerEvents = "none";
+              yearInput.style.userSelect = "none";
+              yearInput.tabIndex = -1;
+            }
+
+            const scroller = $("#contentScroll");
+            let rafPending = false;
+
+            scroller.addEventListener("scroll", () => {
+              if (!inst.isOpen) return;
+              if (rafPending) return;
+              rafPending = true;
+              requestAnimationFrame(() => {
+                rafPending = false;
+                inst._positionCalendar();
+              });
+            }, { passive: true });
+
+            function syncYearArrows(){
+              const wrap = inst.calendarContainer.querySelector(".numInputWrapper");
+              if (!wrap) return;
+              const up = wrap.querySelector(".arrowUp");
+              const down = wrap.querySelector(".arrowDown");
+              const y = inst.currentYear;
+
+              const minY = inst.config.minDate ? inst.config.minDate.getFullYear() : null;
+              const maxY = inst.config.maxDate ? inst.config.maxDate.getFullYear() : null;
+
+              const canDown = (minY == null) ? true : (y > minY);
+              const canUp   = (maxY == null) ? true : (y < maxY);
+
+              if (down){
+                down.classList.toggle("fp-hide", !canDown);
+                down.style.pointerEvents = canDown ? "auto" : "none";
+              }
+              if (up){
+                up.classList.toggle("fp-hide", !canUp);
+                up.style.pointerEvents = canUp ? "auto" : "none";
+              }
+            }
+
+            syncYearArrows();
+            inst.config.onYearChange.push(syncYearArrows);
+            inst.config.onMonthChange.push(syncYearArrows);
+            inst.config.onOpen.push(syncYearArrows);
+          },
+
+          onChange: async (selectedDates) => {
+            if (!selectedDates?.length) return;
+            const ddmmyyyy = ddmmyyyyFromDateObj(selectedDates[0]);
+            if (ddmmyyyy === currentDayDdmmyyyy) return;
+            await loadDayByDate(ddmmyyyy);
+          }
+        });
+
+        const dateInputEl = $("#dateInput");
+        dateInputEl.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (!fp) return;
+          if (fp.isOpen) fp.close();
+          else fp.open();
+        });
+
+        $("#dayBack").addEventListener("click", async (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+
+          const d = parseDdmmyyyy(currentDayDdmmyyyy);
+          d.setDate(d.getDate() - 1);
+          if (d.getTime() < startDateObj.getTime()) return;
+
+          const ddmmyyyy = ddmmyyyyFromDateObj(d);
+          await loadDayByDate(ddmmyyyy);
+        });
+
+        $("#dayForward").addEventListener("click", async (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+
+          const d = parseDdmmyyyy(currentDayDdmmyyyy);
+          d.setDate(d.getDate() + 1);
+          if (d.getTime() > openDayObj.getTime()) return;
+
+          const ddmmyyyy = ddmmyyyyFromDateObj(d);
+          await loadDayByDate(ddmmyyyy);
+        });
+      }else{
+        fp.set("minDate", startDateObj);
+        fp.set("maxDate", openDayObj);
+        fp.setDate(currentObj);
+      }
+
+      $("#dateInput").value = dateInputFromDdmmyyyy(currentDayDdmmyyyy);
+    }
+
+    function setActiveView(name){
+      activeViewName = name;
+
+      $$(".view").forEach(v => v.classList.remove("active"));
+      $("#view" + name).classList.add("active");
+      $$(".navBtn").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+
+      if (name === "Day"){
+        enableStickyObserver();
+        syncStickyNowNoAnim();
+      } else {
+        disableStickyObserver();
+      }
+
+      if (name === "Weights") loadWeights();
+      updateFloatingActions();
+      forceResponsiveReflow();
+    }
+
+    function updateFloatingActions(){
+      const isDay = $("#viewDay").classList.contains("active");
+      const isFoods = $("#viewFoods").classList.contains("active");
+      const dayClosed = !!currentDayDayClosed;
+
+      $("#fabDay").classList.toggle("hidden", !(isDay && !dayClosed));
+      $("#fabFoods").classList.toggle("hidden", !isFoods);
+
+      const isOpenToday = (!dayClosed && currentDayDdmmyyyy === todayDdmmyyyy());
+      const isOpenTomorrow = (!dayClosed && currentDayDdmmyyyy === tomorrowDdmmyyyy());
+
+      const endBtn = $("#endBtn");
+      const revertBtn = $("#revertBtn");
+
+      if (endBtn) endBtn.classList.toggle("hidden", !isOpenToday);
+      if (revertBtn) revertBtn.classList.toggle("hidden", !isOpenTomorrow);
+    }
+
+    function rebuildCombosFromFoods(f){
+      foodsMap = {};
+      foodsCombo = [];
+      fruitsCombo = [];
+      nutsCombo = [];
+      vegetablesCombo = [];
+
+      f.foods.forEach(food => {
+        foodsMap[food.name.toUpperCase()] = {
+          protein: Number(food.protein),
+          fat: Number(food.fat),
+          calories: Number(food.calories),
+          type: food.type,
+          innerType: food.inner_type || "",
+          available: food.available || ""
+        };
+        foodsCombo.push(food.name);
+
+        if (food.inner_type ){
+          if (food.inner_type === "Fruits") fruitsCombo.push(food.name);
+          if (food.inner_type === "Nuts") nutsCombo.push(food.name);
+          if (food.inner_type === "Vegetables") vegetablesCombo.push(food.name);
+        }
+      });
+
+      Object.keys(groups).forEach(g => foodsCombo.push(g[0] + g.slice(1).toLowerCase()));
+
+      foodsCombo.sort((a,b)=>a.localeCompare(b));
+      fruitsCombo.sort((a,b)=>a.localeCompare(b));
+      nutsCombo.sort((a,b)=>a.localeCompare(b));
+      vegetablesCombo.sort((a,b)=>a.localeCompare(b));
+    }
+
+    function calcFoodValue(name, key, weight){
+      const f = foodsMap[name.toUpperCase()];
+      if (!f) return "";
+      return (Number(f[key]) * Number(weight)) / 100;
+    }
+
+    function isMealRowEmpty(tr){
+      const name = $("td:nth-child(1) input", tr).value.trim();
+      const weight = $("td:nth-child(2) input", tr).value.trim();
+      const p = $("td:nth-child(3) input", tr).value.trim();
+      const f = $("td:nth-child(4) input", tr).value.trim();
+      const c = $("td:nth-child(5) input", tr).value.trim();
+      return !name && !weight && !p && !f && !c;
+    }
+
+    function ensureTrailingEmptyRowsForMeal(tbody, buildRowFn){
+      const rows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
+      const empties = rows.filter(isMealRowEmpty);
+
+      while (empties.length > 1){
+        empties.pop().remove();
+      }
+
+      const hasEmpty = $$("tr", tbody)
+        .filter(tr => !tr.classList.contains("sumRow"))
+        .some(isMealRowEmpty);
+
+      if (!hasEmpty){
+        const sumRow = $("tr.sumRow", tbody);
+        const newTr = buildRowFn();
+        if (sumRow) tbody.insertBefore(newTr, sumRow);
+        else tbody.appendChild(newTr);
+      }
+    }
+
+    function enforceMax5Rows(tbody){
+      const rows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
+      let empties = rows.filter(isMealRowEmpty);
+
+      while (empties.length > 1){
+        empties.pop().remove();
+        empties = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow") && isMealRowEmpty(tr));
+      }
+
+      let allRows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
+      while (allRows.length > 5){
+        const last = allRows[allRows.length - 1];
+        if (isMealRowEmpty(last)){
+          last.remove();
+          allRows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
+        }else{
+          break;
+        }
+      }
+
+      const nonEmptyNow = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow") && !isMealRowEmpty(tr));
+      const emptyNow = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow") && isMealRowEmpty(tr));
+
+      if (nonEmptyNow.length <= 4 && emptyNow.length === 0){
+        const sumRow = $("tr.sumRow", tbody);
+        const empty = tbody.__buildRowEmpty ? tbody.__buildRowEmpty() : null;
+        if (empty && sumRow) tbody.insertBefore(empty, sumRow);
+      }
+    }
+
+    function mealCardByName(name){
+      return $(`.mealCard[data-meal="${CSS.escape(name)}"]`);
+    }
+
+    function computeDerivedLockedGroups(day){
+      const locked = new Set();
+      if (!day || !Array.isArray(day.meals)) return locked;
+
+      day.meals.forEach(meal => {
+        const mealNameUpper = (meal.name || "").toUpperCase();
+        const isGroupMeal = (mealNameUpper in groups);
+        const signed = !!meal.meal_closed;
+        if (!signed) return;
+        if (isGroupMeal) return;
+
+        (meal.foods || []).forEach(f => {
+          const n = (f.name || "").toUpperCase();
+          if (n in groups) locked.add(n);
+        });
+      });
+
+      return locked;
+    }
+
+    function sumMeal(mealName){
+      const card = mealCardByName(mealName);
+      if (!card) return {protein:0,fat:0,calories:0,hasAny:false};
+
+      const rows = $$("tbody tr", card).filter(tr => !tr.classList.contains("sumRow"));
+      let p=0,f=0,c=0;
+      let hasAny = false;
+
+      rows.forEach(tr => {
+        const name = $("td:nth-child(1) input", tr).value.trim();
+        const w = $("td:nth-child(2) input", tr).value.trim();
+        const pv = $("td:nth-child(3) input", tr).value.trim();
+        const fv = $("td:nth-child(4) input", tr).value.trim();
+        const cv = $("td:nth-child(5) input", tr).value.trim();
+
+        if (name && (w || (name.toUpperCase() in groups))) hasAny = true;
+        if (pv !== "") p += Number(pv);
+        if (fv !== "") f += Number(fv);
+        if (cv !== "") c += Number(cv);
+      });
+
+      p = round2(p); f = round2(f); c = round2(c);
+
+      const footer = $("tr.sumRow", card);
+      footer.querySelector("[data-sum='p']").textContent = p;
+      footer.querySelector("[data-sum='f']").textContent = f;
+      footer.querySelector("[data-sum='c']").textContent = c;
+
+      return {protein:p, fat:f, calories:c,hasAny};
+    }
+
+    function groupMealNameFromUpper(groupUpper){
+      return groupUpper[0] + groupUpper.slice(1).toLowerCase();
+    }
+
+    function getGroupTotals(groupUpper){
+      const mealName = groupMealNameFromUpper(groupUpper);
+      const sums = sumMeal(mealName);
+      const hasAny = sums.hasAny;
+      const defaultCalories = Number(groups[groupUpper] || 0);
+
+      return {
+        protein: round2(sums.protein),
+        fat: round2(sums.fat),
+        calories: round2(hasAny ? sums.calories : defaultCalories),
+        hasAny
+      };
+    }
+
+    function propagateGroupRow(groupUpper, p, f, c){
+      $$(".mealCard tbody tr").forEach(tr => {
+        if (tr.classList.contains("sumRow")) return;
+        const nameInput = $("td:nth-child(1) input", tr);
+        if (!nameInput) return;
+        if (nameInput.value.trim().toUpperCase() !== groupUpper) return;
+
+        const card = tr.closest(".mealCard");
+        const mealName = card.dataset.meal || "";
+
+        const isLocked = card.dataset.locked === "1";
+        if (isLocked) return;
+
+        const wInput = $("td:nth-child(2) input", tr);
+        const pInput = $("td:nth-child(3) input", tr);
+        const fInput = $("td:nth-child(4) input", tr);
+        const cInput = $("td:nth-child(5) input", tr);
+
+        wInput.value = "";
+        wInput.disabled = true;
+        pInput.value = p;
+        fInput.value = f;
+        cInput.value = c;
+
+        sumMeal(mealName);
+
+        const tbody = tr.closest("tbody");
+        ensureTrailingEmptyRowsForMeal(tbody, () => {
+          const empty = document.createElement("tr");
+          empty.innerHTML = `
+            <td><input class="cellInput" value="" /></td>
+            <td class="num"><input class="cellInput" inputmode="decimal" value="" placeholder="" /></td>
+            <td class="num"><input class="cellInput" disabled value="" /></td>
+            <td class="num"><input class="cellInput" disabled value="" /></td>
+            <td class="num"><input class="cellInput" disabled value="" /></td>
+          `;
+          return empty;
+        });
+
+        enforceMax5Rows(tbody);
+      });
+    }
+
+    function updateGroupMealTotals(groupMealUpper){
+      const gt = getGroupTotals(groupMealUpper);
+      propagateGroupRow(groupMealUpper, gt.protein, gt.fat, gt.calories);
+    }
+
+    function computeNeeded(){
+      const weight = Number($("#weightInput").value || 0);
+      const proteinNeeded = Number(settings.daily.protein) * weight;
+
+      const bd = parseDdmmyyyy(settings.person.birth_day);
+      const cur = parseDdmmyyyy(currentDayDdmmyyyy);
+      const age = Math.floor((cur.getTime() - bd.getTime()) / (365.2425 * 24 * 3600 * 1000));
+
+      const caloriesNeeded =
+        (10 * weight + 6.25 * Number(settings.person.height) - 5 * age + 5) *
+        Number(settings.daily.tdee_multiplier) -
+        Number(settings.daily.calories);
+
+      const fatCaloriesNeeded = caloriesNeeded * Number(settings.daily.fat);
+
+      return {
+        proteinNeeded: round2(proteinNeeded),
+        caloriesNeeded: round2(caloriesNeeded),
+        fatCaloriesNeeded: round2(fatCaloriesNeeded)
+      };
+    }
+
+    function setMiniState(el, ok){
+      el.classList.remove("ok","bad");
+      el.classList.add(ok ? "ok" : "bad");
+    }
+
+    function computeAllTotals(){
+      let totalProtein = 0;
+      let totalFat = 0;
+      let totalCalories = 0;
+
+      $$("#viewDay .mealCard").forEach(card => {
+        const mealName = card.dataset.meal.toUpperCase();
+        if (mealName in groups) return;
+
+        const footer = $("tr.sumRow", card);
+        totalProtein += Number(footer.querySelector("[data-sum='p']").textContent || 0);
+        totalFat += Number(footer.querySelector("[data-sum='f']").textContent || 0);
+        totalCalories += Number(footer.querySelector("[data-sum='c']").textContent || 0);
+      });
+
+      totalProtein = round2(totalProtein);
+      totalFat = round2(totalFat);
+      totalCalories = round2(totalCalories);
+      const fatCalories = round2(totalFat * 9);
+
+      $("#sumProtein").textContent = totalProtein;
+      $("#sumFatCal").textContent = fatCalories;
+      $("#sumCalories").textContent = totalCalories;
+
+      const need = computeNeeded();
+      $("#needProtein").textContent = need.proteinNeeded;
+      $("#needFatCal").textContent = need.fatCaloriesNeeded;
+      $("#needCalories").textContent = need.caloriesNeeded;
+
+      const leftProtein = round2(need.proteinNeeded - totalProtein);
+      const leftFat = round2(need.fatCaloriesNeeded - fatCalories);
+      const leftCalories = round2(need.caloriesNeeded - totalCalories);
+
+      $("#leftProtein").textContent = leftProtein;
+      $("#leftFatCal").textContent = leftFat;
+      $("#leftCalories").textContent = leftCalories;
+
+      setMiniState($("#miniProtein"), leftProtein <= 0);
+      setMiniState($("#miniFat"), leftFat >= 0);
+      setMiniState($("#miniCalories"), leftCalories >= 0);
+    }
+
+    function collectUiDraftDay(){
+      const weight = Number($("#weightInput").value || 0);
+
+      const meals = [];
+      $$("#viewDay .mealCard").forEach(card => {
+        const mealName = card.dataset.meal;
+
+        const foods = [];
+        const rows = $$("tbody tr", card).filter(tr => !tr.classList.contains("sumRow"));
+
+        rows.forEach(tr => {
+          const name = $("td:nth-child(1) input", tr).value.trim();
+          const w = $("td:nth-child(2) input", tr).value.trim();
+          const p = $("td:nth-child(3) input", tr).value.trim();
+          const f = $("td:nth-child(4) input", tr).value.trim();
+          const c = $("td:nth-child(5) input", tr).value.trim();
+
+          if (!name) return;
+
+          const up = name.toUpperCase();
+          if (!(up in foodsMap) && !(up in groups)){
+            throw new Error("Food Doesn't Exist: " + name);
+          }
+
+          if (w === "" && !(up in groups)) return;
+
+          foods.push({ name, weight: w, protein: p, fat: f, calories: c });
+        });
+
+        meals.push({
+          name: mealName,
+          foods,
+          meal_closed: !!mealClosedState[mealName]
+        });
+      });
+
+      const draft = {
+        date: currentDayDdmmyyyy,
+        day_closed: !!currentDayDayClosed,
+        weight,
+        meals
+      };
+
+      if (draft.day_closed){
+        draft.meals.forEach(m => { m.meal_closed = true; });
+        return draft;
+      }
+
+      const derivedLocked = computeDerivedLockedGroups(draft);
+
+      draft.meals.forEach(m => {
+        const upMeal = String(m.name || "").toUpperCase();
+
+        if (upMeal in groups){
+          m.meal_closed = derivedLocked.has(upMeal);
+        } else {
+          m.meal_closed = !!mealClosedState[m.name];
+        }
+      });
+
+      return draft;
+    }
+
+    function collectDayPayload(){
+      const d = collectUiDraftDay();
+      return { weight: d.weight, meals: d.meals };
+    }
+
+    function computeGroupsInMealFromDraft(draftDay, mealName){
+      const s = new Set();
+      const m = (draftDay.meals || []).find(x => (x.name || "") === mealName);
+      if (!m || !Array.isArray(m.foods)) return s;
+      m.foods.forEach(f => {
+        const up = String(f?.name || "").trim().toUpperCase();
+        if (up && (up in groups)) s.add(up);
+      });
+      return s;
+    }
+
+    function collapseAfterSign(draftDay, mealName){
+      if (mealUiState.date !== currentDayDdmmyyyy){
+        mealUiState = { date: currentDayDdmmyyyy, collapsed: {} };
+      }
+
+      mealUiState.collapsed[mealName] = true;
+
+      const derived = computeDerivedLockedGroups(draftDay);
+      (draftDay.meals || []).forEach(m => {
+        const up = (m.name || "").toUpperCase();
+        if (up in groups && derived.has(up)){
+          mealUiState.collapsed[m.name] = true;
+        }
+      });
+    }
+
+    async function saveDay(){
+      try{
+        const payload = collectDayPayload();
+        await apiPatch("days/" + currentDayDdmmyyyy, payload);
+        toast("ok", "Saved Successfully");
+        snapshotMealCollapse();
+        await loadDayByDate(currentDayDdmmyyyy);
+      }catch(e){
+        toast("err", e.message || "Save failed");
+        showViewError("Day", "Day", e.message || "Save failed", () => saveDay());
+      }
+    }
+
+    async function endDay(){
+      try{
+        await apiPost("days/" + currentDayDdmmyyyy + "/end");
+        toast("ok", "Saved Successfully");
+        await loadOpenDay();
+      }catch(e){
+        toast("err", e.message || "Failed to end day");
+        showViewError("Day", "Day", e.message || "Failed to end day", () => endDay());
+      }
+    }
+
+    function buildMealsUI(day){
+      const wrap = $("#mealsWrap");
+      wrap.innerHTML = "";
+
+      const dayClosed = !!day.day_closed;
+      const derivedLockedGroups = computeDerivedLockedGroups(day);
+
+      day.meals.forEach(meal => {
+        const mealNameUpper = (meal.name || "").toUpperCase();
+        const isGroupMeal = (mealNameUpper in groups);
+
+        const signed = !!meal.meal_closed;
+        const derivedLocked = isGroupMeal && derivedLockedGroups.has(mealNameUpper);
+
+        const locked = dayClosed || signed || derivedLocked;
+        const canToggleSign = !dayClosed && !isGroupMeal;
+
+        const card = document.createElement("div");
+        card.className = "mealCard";
+        card.dataset.meal = meal.name;
+        card.dataset.locked = locked ? "1" : "0";
+
+        const header = document.createElement("div");
+        header.className = "mealTop";
+
+        const signBtnHtml = (() => {
+          if (dayClosed) return "";
+          if (!isGroupMeal){
+            if (signed){
+              return `<button class="signBtn signed" type="button" data-sign-btn title="Unsign">✓</button>`;
+            }
+            return `<button class="signBtn" type="button" data-sign-btn title="Sign">✓</button>`;
+          }
+          if (derivedLocked){
+            return `<button class="signBtn derived" type="button" data-sign-btn disabled title="Locked by signed meal">✓</button>`;
+          }
+          return `<button class="signBtn" type="button" data-sign-btn disabled title="Group meal cannot be signed">✓</button>`;
+        })();
+
+        header.innerHTML = `
+          <div class="mealName">${escapeHtml(meal.name)}</div>
+          <div class="mealTopRight">
+            ${signBtnHtml}
+            <button class="collapseBtn" type="button" data-collapse-btn>▾</button>
+          </div>
+        `;
+
+        const body = document.createElement("div");
+        body.className = "mealBodyDay";
+
+        const table = document.createElement("table");
+        table.className = "table";
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th style="width:38%">Name</th>
+              <th class="num" style="width:16%;">Weight</th>
+              <th class="num" style="width:15%;">Protein</th>
+              <th class="num" style="width:13%;">Fat</th>
+              <th class="num" style="width:18%;">Calories</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+
+        const tbody = $("tbody", table);
+
+        function buildRow(food){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>
+              <input class="cellInput" ${locked ? "disabled" : ""} value="${escapeHtml(food?.name || "")}" placeholder="" />
+            </td>
+            <td class="num">
+              <input class="cellInput" ${locked ? "disabled" : ""} inputmode="decimal"
+                value="${escapeHtml(food?.weight || "")}" placeholder="" />
+            </td>
+            <td class="num"><input class="cellInput" disabled value="${escapeHtml(food?.protein ?? "")}" /></td>
+            <td class="num"><input class="cellInput" disabled value="${escapeHtml(food?.fat ?? "")}" /></td>
+            <td class="num"><input class="cellInput" disabled value="${escapeHtml(food?.calories ?? "")}" /></td>
+          `;
+
+          const nameInput = $("td:nth-child(1) input", tr);
+          const wInput = $("td:nth-child(2) input", tr);
+          const pInput = $("td:nth-child(3) input", tr);
+          const fInput = $("td:nth-child(4) input", tr);
+          const cInput = $("td:nth-child(5) input", tr);
+
+          const kind = (() => {
+            if (!isGroupMeal) return "FOODS";
+            if (mealNameUpper === "FRUITS") return "FRUITS";
+            if (mealNameUpper === "NUTS") return "NUTS";
+            if (mealNameUpper === "VEGETABLES") return "VEGETABLES";
+            return "FOODS";
+          })();
+
+          attachAutocomplete(nameInput, kind);
+
+          const initialName = (nameInput.value || "").trim().toUpperCase();
+          if (initialName in groups){
+            wInput.value = "";
+            wInput.disabled = true;
+          }
+
+          function ensureTrailingAndMax5(){
+            if (locked) return;
+            ensureTrailingEmptyRowsForMeal(tbody, () => buildRow(null));
+            enforceMax5Rows(tbody);
+          }
+
+          function updateRowNutrition(){
+            if (locked) return;
+
+            const name = (nameInput.value || "").trim();
+            const up = name.toUpperCase();
+            const weight = (wInput.value || "").trim();
+
+            ensureTrailingAndMax5();
+
+            if (up in groups){
+              wInput.value = "";
+              wInput.disabled = true;
+
+              const gt = getGroupTotals(up);
+              pInput.value = gt.protein;
+              fInput.value = gt.fat;
+              cInput.value = gt.calories;
+
+              sumMeal(meal.name);
+              computeAllTotals();
+              ensureTrailingAndMax5();
+              return;
+            }
+
+            wInput.disabled = false;
+
+            if (!name){
+              pInput.value = ""; fInput.value = ""; cInput.value = "";
+              sumMeal(meal.name);
+              computeAllTotals();
+              ensureTrailingAndMax5();
+              return;
+            }
+
+            if (!(up in foodsMap)){
+              pInput.value = ""; fInput.value = ""; cInput.value = "";
+              sumMeal(meal.name);
+              computeAllTotals();
+              ensureTrailingAndMax5();
+              return;
+            }
+
+            if (weight && !isNaN(Number(weight))){
+              pInput.value = round2(calcFoodValue(name, "protein", weight));
+              fInput.value = round2(calcFoodValue(name, "fat", weight));
+              cInput.value = round2(calcFoodValue(name, "calories", weight));
+            }else{
+              pInput.value = ""; fInput.value = ""; cInput.value = "";
+            }
+
+            if (mealNameUpper in groups){
+              updateGroupMealTotals(mealNameUpper);
+            }
+
+            sumMeal(meal.name);
+            computeAllTotals();
+            ensureTrailingAndMax5();
+          }
+
+          if (!locked){
+            nameInput.addEventListener("input", updateRowNutrition);
+            nameInput.addEventListener("change", updateRowNutrition);
+            nameInput.addEventListener("blur", updateRowNutrition);
+            wInput.addEventListener("input", updateRowNutrition);
+          }
+
+          return tr;
+        }
+
+        tbody.__buildRowEmpty = () => buildRow(null);
+
+        const foods = Array.isArray(meal.foods) ? meal.foods : [];
+        foods.forEach(f => tbody.appendChild(buildRow(f)));
+
+        if (!locked) tbody.appendChild(buildRow(null));
+
+        const tfoot = document.createElement("tr");
+        tfoot.className = "sumRow";
+        tfoot.innerHTML = `
+          <td>Sum</td>
+          <td class="num"></td>
+          <td class="num" data-sum="p">0</td>
+          <td class="num" data-sum="f">0</td>
+          <td class="num" data-sum="c">0</td>
+        `;
+        tbody.appendChild(tfoot);
+
+        body.appendChild(table);
+        card.appendChild(header);
+        card.appendChild(body);
+        wrap.appendChild(card);
+
+        card.dataset.initCollapsed = dayClosed ? "0" : (initialCollapsedForMeal(meal.name, locked) ? "1" : "0");
+        wireCollapse(card);
+
+        const signBtn = card.querySelector("[data-sign-btn]");
+        if (signBtn && canToggleSign){
+          signBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            try{
+              snapshotMealCollapse();
+
+              const draftBefore = collectUiDraftDay();
+              const cur = !!mealClosedState[meal.name];
+              const next = !cur;
+
+              const groupsInThisMeal = computeGroupsInMealFromDraft(draftBefore, meal.name);
+
+              mealClosedState[meal.name] = next;
+
+              if (mealUiState.date !== currentDayDdmmyyyy){
+                mealUiState = { date: currentDayDdmmyyyy, collapsed: {} };
+              }
+
+              if (next){
+                const draftAfter = JSON.parse(JSON.stringify(draftBefore));
+                (draftAfter.meals || []).forEach(m => {
+                  const isThis = (m.name === meal.name);
+                  const upMeal = String(m.name || "").toUpperCase();
+
+                  if (upMeal in groups){
+                    m.meal_closed = false;
+                  } else {
+                    m.meal_closed = isThis ? true : !!mealClosedState[m.name];
+                  }
+                });
+
+                collapseAfterSign(draftAfter, meal.name);
+              } else {
+                mealUiState.collapsed[meal.name] = false;
+
+                const draftAfter = JSON.parse(JSON.stringify(draftBefore));
+                (draftAfter.meals || []).forEach(m => {
+                  m.meal_closed = !!mealClosedState[m.name];
+                });
+
+                const derivedNow = computeDerivedLockedGroups(draftAfter);
+                groupsInThisMeal.forEach(groupUpper => {
+                  if (!derivedNow.has(groupUpper)){
+                    const groupMealName = groupMealNameFromUpper(groupUpper);
+                    mealUiState.collapsed[groupMealName] = false;
+                  }
+                });
+              }
+
+              const draftRender = JSON.parse(JSON.stringify(draftBefore));
+              (draftRender.meals || []).forEach(m => {
+                m.meal_closed = !!mealClosedState[m.name];
+              });
+
+              renderDay(draftRender);
+            }catch(err){
+              toast("err", err.message || "Failed");
+            }
+          });
+        }
+
+        sumMeal(meal.name);
+        if (!locked) {
+          ensureTrailingEmptyRowsForMeal(tbody, () => buildRow(null));
+          enforceMax5Rows(tbody);
+        }
+      });
+
+      computeAllTotals();
+    }
+
+    function computeAllTotalsWithGroupUpdates(day){
+      if (!day.day_closed){
+        Object.keys(groups).forEach(g => updateGroupMealTotals(g));
+      }
+      computeAllTotals();
+    }
+
+    async function loadSettings(){
+      clearViewError("Settings");
+
+      try{
+        const s = await apiGet("settings");
+        settings = s.settings;
+
+        groups = {};
+        settings.groups.forEach(g => { groups[g.name.toUpperCase()] = Number(g.calories); });
+
+        startDateDdmmyyyy = settings.start_date;
+        startDateObj = parseDdmmyyyy(startDateDdmmyyyy);
+
+        $("#setDailyCalories").textContent = settings.daily.calories;
+        $("#setDailyFat").textContent = settings.daily.fat;
+        $("#setDailyProtein").textContent = settings.daily.protein;
+        $("#setTdee").textContent = settings.daily.tdee_multiplier;
+
+        $("#setBirth").textContent = dateInputFromDdmmyyyy(settings.person.birth_day);
+        $("#setGender").textContent = settings.person.gender;
+        $("#setHeight").textContent = settings.person.height;
+
+        clearViewError("Settings");
+      }catch(e){
+        const msg = e.message || "Failed to load settings";
+        toast("err", msg);
+        showViewError("Settings", "Settings", msg, () => loadSettings());
+        throw e;
+      }
+    }
+
+    async function loadFoods(){
+      clearViewError("Foods");
+
+      try{
+        const f = await apiGet("foods");
+        rebuildCombosFromFoods(f);
+        buildFoodsEditorUI(f.foods);
+
+        clearViewError("Foods");
+      }catch(e){
+        const msg = e.message || "Failed to load foods";
+        toast("err", msg);
+        showViewError("Foods", "Foods", msg, () => loadFoods());
+        throw e;
+      }
+    }
+
+    function buildFoodsEditorUI(foods){
+      const types = ["Protein","Fat","Carb","Extra"];
+      const byType = {};
+      types.forEach(t => byType[t] = []);
+      foods.forEach(x => (byType[x.type] = byType[x.type] || []).push(x));
+
+      const wrap = $("#foodsEditor");
+      wrap.innerHTML = "";
+
+      types.forEach(t => {
+        const card = document.createElement("div");
+        card.className = "mealCard";
+        card.style.marginBottom = "12px";
+        card.dataset.type = t;
+
+        card.innerHTML = `
+          <div class="mealTop">
+            <div class="mealName">${escapeHtml(t)}</div>
+            <div class="mealTopRight">
+              <button class="collapseBtn" type="button" data-collapse-btn>▾</button>
+            </div>
+          </div>
+
+          <div class="mealBodyFoods">
+            <div class="foodsInner">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width:28%">Name</th>
+                    <th class="num" style="width:14%;">Protein</th>
+                    <th class="num" style="width:14%;">Fat</th>
+                    <th class="num" style="width:16%;">Calories</th>
+                    <th style="width:16%">type</th>
+                    <th style="width:12%">Avl</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        const tbody = $("tbody", card);
+
+        function isFoodRowEmpty(tr){
+          return $$("td input", tr).every(i => i.value.trim() === "");
+        }
+
+        function ensureFoodTrailingEmptyRow(){
+          const rows = $$("tr", tbody);
+          const empties = rows.filter(isFoodRowEmpty);
+
+          while (empties.length > 1){
+            empties.pop().remove();
+          }
+
+          const hasEmpty = $$("tr", tbody).some(isFoodRowEmpty);
+          if (!hasEmpty){
+            tbody.appendChild(buildFoodRow(null));
+          }
+        }
+
+        function buildFoodRow(food){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><input class="cellInput" value="${escapeHtml(food?.name || "")}" /></td>
+            <td class="num"><input class="cellInput" inputmode="decimal" value="${escapeHtml(food?.protein ?? "")}" /></td>
+            <td class="num"><input class="cellInput" inputmode="decimal" value="${escapeHtml(food?.fat ?? "")}" /></td>
+            <td class="num"><input class="cellInput" inputmode="decimal" value="${escapeHtml(food?.calories ?? "")}" /></td>
+            <td><input class="cellInput" value="${escapeHtml(food?.inner_type || "")}" /></td>
+            <td><input class="cellInput" value="${escapeHtml(food?.available || "")}" /></td>
+          `;
+
+          $$("input", tr).forEach(i => i.addEventListener("input", ensureFoodTrailingEmptyRow));
+          return tr;
+        }
+
+        (byType[t] || []).forEach(r => tbody.appendChild(buildFoodRow(r)));
+        tbody.appendChild(buildFoodRow(null));
+        ensureFoodTrailingEmptyRow();
+
+        wrap.appendChild(card);
+
+        card.dataset.initCollapsed = "0";
+        wireCollapse(card);
+      });
+    }
+
+    async function saveFoods(){
+      try{
+        const foodsForAPI = [];
+        const cards = $$("#foodsEditor .mealCard");
+
+        cards.forEach(card => {
+          const type = card.dataset.type;
+          const rows = $$("tbody tr", card);
+
+          rows.forEach(tr => {
+            const tds = $$("td input", tr);
+            const vals = tds.map(x => x.value.trim());
+            const [name, protein, fat, calories, innerType, available] = vals;
+
+            if (!name && !protein && !fat && !calories && !innerType && !available) return;
+            foodsForAPI.push({ type, name, protein, fat, calories, inner_type: innerType, available });
+          });
+        });
+
+        await apiPut("foods", { foods: foodsForAPI });
+        toast("ok", "Saved Successfully");
+        await loadSettings();
+        await loadFoods();
+        await loadDayByDate(currentDayDdmmyyyy);
+      }catch(e){
+        toast("err", e.message || "Foods save failed");
+        showViewError("Foods", "Foods", e.message || "Foods save failed", () => saveFoods());
+      }
+    }
+
+    function initMealClosedStateFromDay(day){
+      mealClosedState = {};
+      (day.meals || []).forEach(m => {
+        mealClosedState[m.name] = !!m.meal_closed;
+      });
+    }
+
+    function applyMealClosedStateToDay(day){
+      (day.meals || []).forEach(m => {
+        m.meal_closed = !!mealClosedState[m.name];
+      });
+      return day;
+    }
+
+    async function loadOpenDay(){
+      clearViewError("Day");
+
+      const prevDay = currentDayDdmmyyyy;
+      const prevTemplate = currentDayTemplate ? JSON.parse(JSON.stringify(currentDayTemplate)) : null;
+      const prevClosedState = JSON.parse(JSON.stringify(mealClosedState || {}));
+
+      try{
+        const r = await apiGet("days/open");
+        validateDayShape(r.day);
+
+        const ddmmyyyy = r.day.date;
+        openDayObj = parseDdmmyyyy(ddmmyyyy);
+
+        currentDayDdmmyyyy = ddmmyyyy;
+        currentDayTemplate = JSON.parse(JSON.stringify(r.day));
+        currentDayDayClosed = !!r.day.day_closed;
+
+        initMealClosedStateFromDay(currentDayTemplate);
+        mealUiState = { date: "", collapsed: {} };
+
+        renderDay(applyMealClosedStateToDay(JSON.parse(JSON.stringify(currentDayTemplate))));
+
+        setNavButtons();
+        initOrUpdateDatePicker();
+        updateFloatingActions();
+        forceResponsiveReflow();
+
+        clearViewError("Day");
+      }catch(e){
+        currentDayDdmmyyyy = prevDay;
+        currentDayTemplate = prevTemplate;
+        mealClosedState = prevClosedState;
+
+        const msg = e.message || "Open day failed";
+        toast("err", msg);
+        showViewError("Day", "Day", msg, () => loadOpenDay());
+      }
+    }
+
+    async function loadDayByDate(ddmmyyyy){
+      clearViewError("Day");
+
+      const prevDay = currentDayDdmmyyyy;
+      const prevTemplate = currentDayTemplate ? JSON.parse(JSON.stringify(currentDayTemplate)) : null;
+      const prevClosedState = JSON.parse(JSON.stringify(mealClosedState || {}));
+      const seq = ++dayLoadSeq;
+
+      if (dayLoadAbort) dayLoadAbort.abort(new Error("New day selected"));
+      dayLoadAbort = new AbortController();
+
+      try{
+        const r = await fetchJson("days/" + ddmmyyyy, { method:"GET", signal: dayLoadAbort.signal });
+
+        if (seq !== dayLoadSeq) return;
+
+        validateDayShape(r.day);
+
+        const nextTemplate = JSON.parse(JSON.stringify(r.day));
+
+        currentDayDdmmyyyy = ddmmyyyy;
+        currentDayTemplate = nextTemplate;
+        currentDayDayClosed = !!nextTemplate.day_closed;
+
+        initMealClosedStateFromDay(currentDayTemplate);
+        mealUiState = { date: "", collapsed: {} };
+
+        renderDay(applyMealClosedStateToDay(JSON.parse(JSON.stringify(currentDayTemplate))));
+
+        setNavButtons();
+        initOrUpdateDatePicker();
+        updateFloatingActions();
+        forceResponsiveReflow();
+
+        clearViewError("Day");
+      }catch(e){
+        currentDayDdmmyyyy = prevDay;
+        currentDayTemplate = prevTemplate;
+        mealClosedState = prevClosedState;
+
+        if (fp && prevDay){
+          fp.setDate(parseDdmmyyyy(prevDay));
+          $("#dateInput").value = dateInputFromDdmmyyyy(prevDay);
+        }
+
+        const msg = e.message || "Failed to load day";
+        toast("err", msg);
+        showViewError("Day", "Day", msg, () => loadDayByDate(ddmmyyyy));
+      }
+    }
+
+    function renderDay(day){
+      currentDayDayClosed = !!day.day_closed;
+
+      $("#weightInput").value = String(day.weight ?? 0);
+      $("#weightInput").disabled = !!day.day_closed;
+
+      if (Array.isArray(day.meals)){
+        day.meals.forEach(m => {
+          if (m.meal_closed == null) m.meal_closed = false;
+        });
+      }
+
+      buildMealsUI(day);
+      computeAllTotalsWithGroupUpdates(day);
+      updateFloatingActions();
+      updateDayDot();
+    }
+
+    async function loadWeights(){
+      clearViewError("Weights");
+
+      try{
+        const r = await apiGet("weights");
+
+        const days = r.days || [];
+        const weights = [];
+        const start = startDateObj;
+
+        const dayCount = Math.floor((openDayObj.getTime() - start.getTime()) / (1000*3600*24)) + 1;
+        const weeks = Math.ceil(dayCount / 7);
+
+        const avgSum = Array(weeks).fill(0);
+        const avgCnt = Array(weeks).fill(0);
+        const reduction = Array(weeks).fill(null);
+
+        days.forEach(d => {
+          if (Number(d.weight) !== 0){
+            const dt = parseDdmmyyyy(d.date);
+            weights.push({ label: dateInputFromDdmmyyyy(d.date), y: Number(d.weight), dt });
+
+            const pos = Math.floor((dt.getTime() - start.getTime()) / (1000*3600*24) / 7);
+            avgSum[pos] += Number(d.weight);
+            avgCnt[pos] += 1;
+
+            if (dt.getDay() % 7 === 0){
+              reduction[pos] = Number(d.weight);
+            }
+          }
+        });
+
+        const dailyLabels = weights.map(w => w.label);
+        const dailyData = weights.map(w => w.y);
+
+        const weeklyAvgLabels = [];
+        const weeklyAvgData = [];
+        for (let i=0;i<weeks;i++){
+          if (avgCnt[i] > 0){
+            weeklyAvgLabels.push(String(i+1));
+            weeklyAvgData.push(round2(avgSum[i]/avgCnt[i]));
+          }
+        }
+
+        const weeklyRedLabels = [];
+        const weeklyRedData = [];
+        for (let i=1;i<weeks;i++){
+          if (reduction[i-1] != null && reduction[i] != null){
+            weeklyRedLabels.push(String(i));
+            weeklyRedData.push(round2(reduction[i-1] - reduction[i]));
+          }
+        }
+
+        // Create once, otherwise update in-place
+        if (!chartDaily){
+          chartDaily = new Chart($("#chartDaily"), {
+            type: "line",
+            data: { labels: dailyLabels, datasets: [{ label:"Weight", data: dailyData, pointRadius:3, tension:0.25 }] },
+            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } } } }
+          });
+        } else {
+          chartDaily.data.labels = dailyLabels;
+          chartDaily.data.datasets[0].data = dailyData;
+          chartDaily.update();
+        }
+
+        if (!chartWeeklyAvg){
+          chartWeeklyAvg = new Chart($("#chartWeeklyAvg"), {
+            type: "line",
+            data: { labels: weeklyAvgLabels, datasets: [{ label:"Weekly Average", data: weeklyAvgData, pointRadius:3, tension:0.25 }] },
+            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } } } }
+          });
+        } else {
+          chartWeeklyAvg.data.labels = weeklyAvgLabels;
+          chartWeeklyAvg.data.datasets[0].data = weeklyAvgData;
+          chartWeeklyAvg.update();
+        }
+
+        if (!chartWeeklyRed){
+          chartWeeklyRed = new Chart($("#chartWeeklyReduction"), {
+            type: "bar",
+            data: { labels: weeklyRedLabels, datasets: [{ label:"Weekly Reduction", data: weeklyRedData }] },
+            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Reduction" } } } }
+          });
+        } else {
+          chartWeeklyRed.data.labels = weeklyRedLabels;
+          chartWeeklyRed.data.datasets[0].data = weeklyRedData;
+          chartWeeklyRed.update();
+        }
+
+        forceResponsiveReflow();
+        clearViewError("Weights");
+      }catch(e){
+        const msg = e.message || "Weights failed";
+        toast("err", msg);
+        showViewError("Weights", "Weights", msg, () => loadWeights());
+      }
+    }
+
+    async function revertDay(){
+      try{
+        await apiPost("days/" + currentDayDdmmyyyy + "/revert");
+        toast("ok", "Reverted Successfully");
+        await loadOpenDay();
+        setActiveView("Day");
+      }catch(e){
+        const msg = e.message || "Revert failed";
+        toast("err", msg);
+        showViewError("Day", "Day", msg, () => revertDay());
+      }
+    }
+
+    function updateDayDot(){
+      const el = $("#dayDot");
+      if (!el) return;
+
+      const open = !currentDayDayClosed;
+
+      el.classList.remove("open","closed");
+      el.classList.add(open ? "open" : "closed");
+      el.title = open ? "Open day" : "Closed day";
+    }
+
+    function enableStickyObserver(){
+      const panel = document.getElementById("dayStickyPanel");
+      if (!panel || !stickyIO || !stickySentinel) return;
+      stickyIO.observe(stickySentinel);
+    }
+
+    function disableStickyObserver(){
+      if (!stickyIO) return;
+      stickyIO.disconnect();
+    }
+
+    function syncStickyNowNoAnim(){
+      const panel = document.getElementById("dayStickyPanel");
+      const scroller = document.getElementById("contentScroll");
+      if (!panel || !scroller) return;
+
+      panel.classList.add("noTrans");
+
+      const stuck = scroller.scrollTop > 0;
+      panel.classList.toggle("is-stuck", stuck);
+
+      panel.offsetHeight;
+      requestAnimationFrame(() => panel.classList.remove("noTrans"));
+    }
+
+    function wireUI(){
+      $$(".navBtn").forEach(btn => {
+        btn.addEventListener("click", async () => setActiveView(btn.dataset.view));
+      });
+
+      $("#saveDayBtn").addEventListener("click", async () => saveDay());
+      $("#endBtn").addEventListener("click", async () => endDay());
+      $("#saveFoodsBtn").addEventListener("click", async () => saveFoods());
+      $("#revertBtn").addEventListener("click", async () => revertDay());
+
+      $("#weightInput").addEventListener("input", () => computeAllTotals());
+
+      let reflowTimer = null;
+      window.addEventListener("resize", () => {
+        clearTimeout(reflowTimer);
+        reflowTimer = setTimeout(forceResponsiveReflow, 50);
+      }, { passive:true });
+
+      window.addEventListener("orientationchange", () => forceResponsiveReflow(), { passive:true });
+    }
+
+    async function boot(){
+      try{
+        acInit();
+        wireUI();
+
+        window.addEventListener("unhandledrejection", (ev) => {
+          const msg = ev?.reason?.message || String(ev?.reason || "Unexpected error");
+          toast("err", msg);
+          showErrorOnActiveView("Error", msg, () => boot());
+        });
+
+        window.addEventListener("error", (ev) => {
+          const msg = ev?.error?.message || ev?.message || "Unexpected error";
+          toast("err", msg);
+          showErrorOnActiveView("Error", msg, () => boot());
+        });
+
+        await loadSettings();
+        await loadFoods();
+        await loadOpenDay();
+
+        function initStickyStuckClass(){
+          const panel = document.getElementById("dayStickyPanel");
+          const scroller = document.getElementById("contentScroll");
+          if (!panel || !scroller) return;
+
+          if (!stickySentinel){
+            stickySentinel = document.createElement("div");
+            stickySentinel.style.position = "relative";
+            stickySentinel.style.height = "1px";
+            panel.parentNode.insertBefore(stickySentinel, panel);
+          }
+
+          if (!stickyIO){
+            stickyIO = new IntersectionObserver(
+              ([entry]) => {
+                panel.classList.toggle("is-stuck", !entry.isIntersecting);
+              },
+              { root: scroller, threshold: [1] }
+            );
+          }
+        }
+
+        initStickyStuckClass();
+
+        setActiveView("Day");
+        updateFloatingActions();
+        forceResponsiveReflow();
+      }catch(e){
+        const msg = e.message || "Failed to load";
+        toast("err", msg);
+        showErrorOnActiveView("Day", msg, () => boot());
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
