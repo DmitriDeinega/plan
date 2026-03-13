@@ -20,8 +20,8 @@ def create_app() -> FastAPI:
     logger = setup_logging(level=cfg.log_level)
 
     bl = BL(
-        cfg.mongo_uri,
-        cfg.mongo_db,
+        mongo_uri=cfg.mongo_uri,
+        mongo_db=cfg.mongo_db,
         logger=logger
     )
 

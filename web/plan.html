@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Plan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content" />
+
+  <title>Plan <!--ENV_SUFFIX--></title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,26 +19,30 @@
 
   <style>
     :root{
-      --bg0:#070A10;
-      --bg1:#0B1020;
-      --card: rgba(255,255,255,0.08);
-      --stroke: rgba(255,255,255,0.14);
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.68);
-      --danger:#ff4d4d;
-      --ok:#2ef2a8;
-      --shadow: 0 16px 50px rgba(0,0,0,0.45);
-      --r22: 22px;
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-top: env(safe-area-inset-top, 0px);
-      --sticky-top: calc(64px + var(--safe-top));
-      --nav-h: 66px;
+	  --bg0:#070A10;
+	  --bg1:#0B1020;
+	  --card: rgba(255,255,255,0.08);
+	  --stroke: rgba(255,255,255,0.14);
+	  --text: rgba(255,255,255,0.92);
+	  --muted: rgba(255,255,255,0.68);
+	  --danger:#ff4d4d;
+	  --ok:#2ef2a8;
+	  --shadow: 0 16px 50px rgba(0,0,0,0.45);
+	  --r22: 22px;
+	  --safe-bottom: env(safe-area-inset-bottom, 0px);
+	  --safe-top: env(safe-area-inset-top, 0px);
+	  --sticky-top: calc(64px + var(--safe-top));
 
-      --ok-border: rgba(46,242,168,0.78);
-      --ok-glow: rgba(46,242,168,0.22);
-      --bad-border: rgba(255,77,77,0.78);
-      --bad-glow: rgba(255,77,77,0.22);
-    }
+	  --nav-btn-h: 44px;
+	  --nav-pad-top: 6px;
+	  --nav-pad-bottom: max(6px, var(--safe-bottom));
+	  --nav-total-h: calc(var(--nav-btn-h) + var(--nav-pad-top) + var(--nav-pad-bottom));
+
+	  --ok-border: rgba(46,242,168,0.78);
+	  --ok-glow: rgba(46,242,168,0.22);
+	  --bad-border: rgba(255,77,77,0.78);
+	  --bad-glow: rgba(255,77,77,0.22);
+	}
 
     *{ box-sizing:border-box; }
 
@@ -59,6 +64,15 @@
       background-repeat: no-repeat;
       overflow-x:hidden;
     }
+	
+	/* keyboard overlay */
+	body.keyboard-open .nav,
+	body.keyboard-open .fabDock{
+	  display: none !important;
+	}
+	body.keyboard-open .content{
+	  padding-bottom: 8px !important;
+	}
 
     .envSuffix{
       margin-left: 6px;
@@ -93,17 +107,18 @@
     }
 
     .shell{
-      height:100%;
-      display:grid;
-      grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr auto;
-    }
+	  height: 100dvh;
+	  display: grid;
+	  grid-template-columns: 1fr;
+	  grid-template-rows: auto 1fr;
+	}
 
     .contentScroll{
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-gutter: stable;
       position: relative;
+	  min-height: 0;
     }
 
     .contentScroll::-webkit-scrollbar{ width: 10px; height: 10px; }
@@ -174,12 +189,12 @@
     .brandTitle .t1{ font-weight:800; letter-spacing:0.2px; }
     .brandTitle .t2{ font-size:12px; color:var(--muted); }
 
-    .content{
-      max-width: 1180px;
-      margin: 0 auto;
-      width: 100%;
-      padding: 14px 12px calc(var(--nav-h) + var(--safe-bottom) + 14px);
-    }
+	.content{
+	  max-width: 1180px;
+	  margin: 0 auto;
+	  width: 100%;
+	  padding: 14px 12px calc(var(--nav-total-h) + 14px);
+	}
 
     .toastWrap{
       position: fixed;
@@ -247,11 +262,11 @@
     }
     .cardBody{ padding: 12px 14px 14px; }
 
-    .hr{ height:1px; background: rgba(255,255,255,0.08); margin: 0 0 12px; }
+    .hr{ height:1px; background: rgba(255,255,255,0.08); margin: 0 0 6px; }
 
     .iconBtn{
-      width:44px;height:44px;
-      border-radius: 12px;
+      width:40px;height:40px;
+      border-radius: 10px;
       border:1px solid rgba(255,255,255,0.14);
       background: rgba(255,255,255,0.06);
       color: rgba(255,255,255,0.92);
@@ -261,67 +276,97 @@
       user-select:none;
       transition: transform 0.08s ease, background 0.2s ease;
       flex: 0 0 auto;
+      font-size: 15px;
     }
     .iconBtn:active{ transform: scale(0.98); }
     .iconBtn[disabled]{ opacity:0.35; cursor:not-allowed; }
 
     .bubble{
-      height: 64px;
       display:flex;
       align-items:center;
-      gap:12px;
-      padding: 12px 12px;
-      border-radius: 22px;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 16px;
       background: rgba(255,255,255,0.05);
       border:1px solid rgba(255,255,255,0.10);
       white-space:nowrap;
       flex: 0 0 auto;
     }
 
+    #weightBubble{
+      justify-content: center;
+      align-items: center;
+    }
+
     .dateBubble{
-      min-width: 220px;
+      min-width: 0;
       justify-content:center;
     }
     .dateInput{
-      width: 150px;
-      height: 44px;
-      border-radius: 14px;
+      width: 100px;
+      min-width: 0;
+      height: 40px;
+      border-radius: 10px;
       border:1px solid rgba(255,255,255,0.14);
       background: rgba(255,255,255,0.06);
       color: rgba(255,255,255,0.92);
-      padding: 0 12px;
+      padding: 0 8px;
       outline:none;
       font: inherit;
       font-weight: 950;
+      font-size: 13px;
       text-align:center;
       cursor:pointer;
       user-select:none;
     }
 
-    .weightTitle{ display:flex; flex-direction:column; gap:4px; }
-    .weightTitle .t1{ font-weight: 950; letter-spacing: .2px; white-space:nowrap; }
-    .weightInputWrap{ display:flex; align-items:center; gap:10px; }
+    .weightTitle{ display:flex; align-items:center; gap:2px; }
+    .weightTitle .t1{ font-weight: 950; letter-spacing: .2px; white-space:nowrap; font-size: 12px; }
+    .weightInputWrap{ display:flex; align-items:center; gap:6px; }
     .weightInput{
-      width: 60px;
-      height: 44px;
-      border-radius: 14px;
+      width: 52px;
+      height: 40px;
+      border-radius: 10px;
       border:1px solid rgba(255,255,255,0.14);
       background: rgba(255,255,255,0.06);
       color: rgba(255,255,255,0.92);
-      padding: 0 12px;
+      padding: 0 8px;
       outline:none;
       font: inherit;
       font-weight: 950;
+      font-size: 13px;
       text-align:center;
       font-variant-numeric: tabular-nums;
     }
-    .weightUnit{ color: rgba(255,255,255,0.68); font-weight: 800; user-select:none; white-space:nowrap; }
+    .weightUnit{ color: rgba(255,255,255,0.68); font-weight: 800; user-select:none; white-space:nowrap; font-size: 13px; }
 
     .mealCard{
       border-radius: 22px;
       background: rgba(255,255,255,0.05);
       border:1px solid rgba(255,255,255,0.10);
       overflow:hidden;
+    }
+
+    .mealBodyDay, .mealBodyFoods{
+      overflow: hidden;
+      max-height: 2000px;
+      transition: max-height 0.28s ease, opacity 0.2s ease;
+      opacity: 1;
+    }
+
+    .mealBodyFoods .foodsInner{
+      max-height: 520px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .mealCard.collapsed .mealBodyDay,
+    .mealCard.collapsed .mealBodyFoods{
+      max-height: 0;
+      opacity: 0;
+    }
+    .mealCard.collapsed .mealTop{
+      border-bottom: none;
     }
     .mealTop{
       padding: 12px 12px 10px;
@@ -402,8 +447,9 @@
     .table th, .table td{
       border-bottom: 1px solid rgba(255,255,255,0.08);
       padding: 10px 10px;
-      font-size: 13px;
+      font-size: 11px;
       text-align:left;
+	  text-transform: uppercase;
     }
     .table th{
       color: rgba(255,255,255,0.68);
@@ -446,39 +492,84 @@
 
     .summaryStack{ display:flex; flex-direction:column; gap:10px; padding-top: 12px; }
 
+    /* Settings view layout */
+    .settingsGrid{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .metric{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+    }
+    .metricTitle{
+      margin: 0;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .35px;
+      color: rgba(255,255,255,0.55);
+    }
+    .metricValue{
+      margin: 0;
+      font-size: 14px;
+      font-weight: 980;
+      color: rgba(255,255,255,0.92);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 850px){
+      .settingsGrid{
+        grid-template-columns: 1fr;
+      }
+    }
+
     .view{ display:none; }
     .view.active{ display:block; }
 
     .nav{
-      position: fixed;
-      left:0; right:0; bottom:0;
-      padding: 10px 12px calc(10px + var(--safe-bottom));
-      background: rgba(7,10,16,0.58);
-      backdrop-filter: blur(14px);
-      border-top: 1px solid rgba(255,255,255,0.10);
-      z-index: 30;
-      height: 66px;
-    }
+	  position: fixed;
+	  left: 0;
+	  right: 0;
+	  bottom: 0;
+	  z-index: 30;
+	  background: rgba(7,10,16,0.58);
+	  backdrop-filter: blur(14px);
+	  border-top: 1px solid rgba(255,255,255,0.10);
+	  padding: var(--nav-pad-top) 8px var(--nav-pad-bottom);
+	  box-sizing: border-box;
+	}
     .navInner{
-      max-width: 1180px;
-      margin:0 auto;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-    }
+	  max-width: 1180px;
+	  margin: 0 auto;
+	  display: flex;
+	  justify-content: space-between;
+	  align-items: stretch;
+	  gap: 10px;
+	  height: var(--nav-btn-h);
+	}
     .navBtn{
-      flex:1;
-      height: 46px;
-      border-radius: 16px;
-      border:1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.68);
-      cursor:pointer;
-      font: inherit;
-      font-weight: 950;
-      letter-spacing: .2px;
-      transition: background .2s ease, color .2s ease, transform .08s ease;
-    }
+	  flex: 1;
+	  height: 100%;
+	  min-height: 0;
+	  border-radius: 16px;
+	  border: 1px solid rgba(255,255,255,0.12);
+	  background: rgba(255,255,255,0.06);
+	  color: rgba(255,255,255,0.68);
+	  cursor: pointer;
+	  font: inherit;
+	  font-weight: 950;
+	  letter-spacing: .2px;
+	  transition: background .2s ease, color .2s ease, transform .08s ease;
+	}
     .navBtn:active{ transform: scale(0.99); }
     .navBtn.active{
       color: rgba(0,0,0,0.90);
@@ -568,70 +659,125 @@
 
     .dayHeaderRow{
       display:flex;
-      align-items:center;
+      align-items:stretch;
       gap:10px;
       flex-wrap:nowrap;
       overflow-x:auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      height: 116px;
     }
     .dayHeaderRow::-webkit-scrollbar{ display:none; }
 
-    .dayHeaderLeft{ display:flex; align-items:center; gap:10px; flex: 0 0 auto; }
+    .dayHeaderLeft{ display:flex; flex-direction:column; align-items:stretch; justify-content:space-between; gap:6px; flex: 0 0 auto; }
     .dayHeaderRight{
       display:flex;
-      align-items:center;
+      align-items:stretch;
       gap:10px;
       margin-left:auto;
       flex: 0 0 auto;
       justify-content:flex-end;
     }
 
-    .sumBubble{
-      height: 64px;
-      padding: 10px 12px;
+    /* Pivoted summary table */
+    .sumTable{
+      width: 340px;
+      flex: 0 0 340px;
+      padding: 10px 14px;
       border-radius: 22px;
       background: rgba(255,255,255,0.05);
-      border:1px solid rgba(255,255,255,0.10);
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      gap:4px;
-      min-width: 160px;
+      border: 1px solid rgba(255,255,255,0.10);
       box-shadow: 0 12px 36px rgba(0,0,0,0.30);
+      white-space: nowrap;
     }
-    .sumLine{
-      display:flex;
-      align-items:baseline;
-      justify-content:space-between;
-      gap:10px;
+    .sumGrid{
+      border-collapse: collapse;
       font-variant-numeric: tabular-nums;
-      line-height:1.0;
+      table-layout: fixed;
+      width: 100%;
     }
-    .sumLine .k{
+    .sumGrid col.sumGrid-col-label{ width: auto; }
+    .sumGrid col.sumGrid-col-daily { width: 88px; }
+    .sumGrid col.sumGrid-col-needed{ width: 74px; }
+    .sumGrid col.sumGrid-col-left  { width: 98px; }
+    .sumGrid thead th.sumTh{
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .45px;
+      color: rgba(255,255,255,0.55);
+      padding: 0 10px 6px 20px;
+      text-align: center;
+    }
+    .sumGrid .sumRowLabel{
       font-size: 11px;
-      color: rgba(255,255,255,0.68);
+      font-weight: 900;
       text-transform: uppercase;
       letter-spacing: .35px;
-      font-weight: 900;
+      color: rgba(255,255,255,0.60);
+      padding: 4px 10px 4px 0;
+      text-align: left;
     }
-    .sumLine .v{
+    .sumGrid .sumVal{
       font-size: 14px;
       font-weight: 980;
       color: rgba(255,255,255,0.92);
+      padding: 4px 10px 4px 20px;
+      text-align: center;
     }
+    .sumGrid .sumValLeft{
+      color: rgba(255,255,255,0.92);
+    }
+    .sumGrid tr.ok .sumValLeft{ color: var(--ok); }
+    .sumGrid tr.bad .sumValLeft{ color: var(--danger); }
+    .sumGrid tbody tr + tr td{ border-top: 1px solid rgba(255,255,255,0.07); }
 
-    .sumBubble.ok{ border: 2px solid var(--ok-border); }
-    .sumBubble.bad{ border: 2px solid var(--bad-border); }
+    /* Day actions bubble — always in sticky panel, right side */
+    .dayActionsBubble{
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: space-between;
+      padding: 8px;
+      gap: 6px;
+      width: 81px;
+    }
+    .dayActBtn{
+      flex: 1;
+      border-radius: 10px;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 980;
+      font-size: 13px;
+      letter-spacing: .2px;
+      user-select: none;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+      color: rgba(0,0,0,0.90);
+      background: linear-gradient(135deg, rgba(46,242,168,0.95), rgba(108,231,255,0.90));
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+    .dayActBtn:active{ transform: scale(0.98); }
+    .dayActBtn--sec{
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.80);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .dayActDivider{
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+      flex: 0 0 auto;
+    }
 
     .fabDock{
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: calc(66px + var(--safe-bottom) + 12px);
-      z-index: 35;
-      pointer-events: none;
-    }
+	  position: fixed;
+	  left: 0;
+	  right: 0;
+	  bottom: calc(var(--nav-total-h) + 12px);
+	  z-index: 35;
+	  pointer-events: none;
+	}
     .fabDockInner{
       max-width: 1180px;
       margin: 0 auto;
@@ -665,441 +811,706 @@
     }
     .fabBtn:active{ transform: scale(0.99); }
 
-    @media (max-width: 900px){
-      .dayHeaderRow{ flex-wrap: wrap; overflow-x: visible; }
+    /* ============================================================
+       AUTOCOMPLETE — base styles (desktop dropdown)
+       Mobile overrides are inside @media (max-width: 737px)
+       ============================================================ */
 
+    /* Outer fixed container — clips everything, no scroll */
+    .acMenu{
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: rgba(15,20,38,0.97);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+      backdrop-filter: blur(16px);
+      overflow: hidden;
+      max-height: 320px;
+    }
+    .acMenu.open{ display: flex; flex-direction: row; }
+
+    /* Inner scrollable list */
+    .acMenuList{
+      flex: 1 1 auto;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      padding: 4px;
+      scrollbar-width: none;
+      min-width: 0;
+    }
+    .acMenuList::-webkit-scrollbar{ display: none; }
+
+    /* Custom scrollbar — absolute right strip inside acMenu */
+    .acScrollbar{
+      flex: 0 0 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border-left: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .acScrollbar.sb-hidden{ visibility: hidden; }
+    .acSbBtn{
+      flex: 0 0 16px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: rgba(255,255,255,0.30);
+      font-size: 7px;
+      user-select: none;
+      transition: color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+    .acSbBtn:hover{ color: rgba(108,231,255,0.85); background: rgba(108,231,255,0.08); }
+    .acSbTrack{
+      flex: 1 1 auto;
+      width: 100%;
+      position: relative;
+      cursor: pointer;
+    }
+    .acSbThumb{
+      position: absolute;
+      left: 1px;
+      right: 1px;
+      min-height: 16px;
+      border-radius: 999px;
+      background: rgba(108,231,255,0.28);
+      cursor: grab;
+      transition: background 0.15s;
+    }
+    .acSbThumb:hover, .acSbThumb.dragging{ background: rgba(108,231,255,0.55); }
+
+    .acItem{
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 900;
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background 0.1s ease;
+    }
+    .acItem:hover, .acItem.active{
+      background: rgba(108,231,255,0.12);
+      color: rgba(255,255,255,0.98);
+    }
+	
+	/* ============================================================
+       MID OVERHAUL  (≤ 737px)
+       ============================================================ */
+    @media (max-width: 737px){
+		:root{
+		  --nav-btn-h: 34px;
+		}
+      /* --- Pull-to-refresh indicator --- */
+      #ptrIndicator{
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: 4px;
+        z-index: 200;
+        background: linear-gradient(90deg, rgba(46,242,168,0.0), rgba(46,242,168,0.9), rgba(108,231,255,0.9), rgba(46,242,168,0.0));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.2s ease, opacity 0.3s ease;
+        opacity: 0;
+      }
+      #ptrIndicator.pulling{ opacity:1; }
+      #ptrIndicator.refreshing{
+        opacity:1;
+        transform: scaleX(1);
+        animation: ptrSweep 0.8s linear infinite;
+      }
+      @keyframes ptrSweep{
+        0%  { background-position: -100% 0; }
+        100%{ background-position: 200% 0; }
+      }
+
+      /* --- Topbar: smaller brand text --- */
+      .brandTitle{ display:block; }
+      .brand{ min-width: unset; gap: 4px; }
+      .topbar{ padding: calc(8px + var(--safe-top)) 10px 8px; }
+      .topbarInner{ gap:8px; }
+
+      /* --- Sticky panel: compact --- */
+      .stickyPanel{
+		padding: 8px;
+		margin-bottom: 8px;
+		transition: none;
+		will-change: auto;
+		}
+
+      /* Single row: [date+weight] | [weight-col] | [summary] | [actions] */
+      .dayHeaderRow{
+        display: flex;
+        align-items: stretch;
+        gap: clamp(0px, 1vw, 5px);
+        overflow-x: visible;
+        height: auto;
+      }
+
+      /* Left: date+weight stacked */
       .dayHeaderLeft{
-        order: 1;
-        flex: 1 1 100%;
-        width: 100%;
+        grid-column: 1 / 2;
+        width: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: stretch;
         justify-content: space-between;
       }
 
-      #dateBubble{ flex: 0 0 auto; }
-      #weightBubble{ flex: 0 0 auto; margin-left: auto; }
 
-      .dayHeaderRight{
-        order: 2;
-        flex: 1 1 100%;
-        width: 100%;
-        margin-left: 0;
-        justify-content: stretch;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .dayHeaderRight .sumBubble{
-        width: 100%;
+      /* Date bubble: fill its column */
+      .bubble.dateBubble{
         min-width: 0;
-      }
-    }
-
-    @media (max-width: 620px){
-      .dayHeaderRight{ grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 560px){
-      .dayHeaderLeft{
-        flex-wrap: wrap;
-        justify-content: flex-start;
-      }
-
-      #dateBubble{ flex: 1 1 100%; }
-
-      #weightBubble{
-        flex: 1 1 100%;
+        flex: 1 1 auto;
         justify-content: center;
+        padding: 4px 6px;
+        gap: 4px;
+      }
+      .dateInput{
+        width: 90px;
+        font-size: 11px;
+        height: 30px;
+      }
+      .iconBtn{
+        width: 28px;
+        height: 30px;
+        min-width: 28px;
+        font-size: 14px;
+      }
+	  
+	  .table th, .table td{
+		font-size: 9px;
+		}
+
+      /* Weight bubble */
+      #weightBubble{
+        grid-column: unset;
+        flex: 1 1 auto;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 8px;
+        gap: 5px;
+        margin-left: 0;
+        white-space: nowrap;
+      }
+      .weightTitle .t1{ font-size: 10px; }
+      .weightInput{ width: 38px; height: 30px; font-size: 11px; padding: 0 4px; }
+      .weightUnit{ font-size: 10px; }
+
+      /* Summary table: right 1/3 */
+      .dayHeaderRight{
+        grid-column: 3 / 4;
+        justify-content: stretch;
+        display: flex;
       }
 
-      #weightBubble .weightInputWrap{ justify-content: center; }
+      /* Actions: 4th column */
+      .dayActionsBubble{
+        grid-column: 4 / 5;
+        width: 58px;
+        padding: 5px;
+        gap: 4px;
+      }
+      .dayActBtn{ font-size: 11px; padding: 0 6px; }
+	  .content{
+		  padding: 8px 8px calc(var(--nav-total-h) + 10px);
+		}
+
+      .sumTable{
+        width: 220px;
+		flex: 0 0 220px;
+        padding: 4px 6px;
+        border-radius: 14px;
+      }
+      .sumGrid{ width: 100%; table-layout: fixed; }
+      .sumGrid thead th.sumTh{
+        font-size: 7px;
+        padding: 0 2px 3px 6px;
+        letter-spacing: .1px;
+      }
+      .sumGrid .sumRowLabel{
+        font-size: 8px;
+        padding: 2px 4px 2px 0;
+        letter-spacing: .1px;
+      }
+      .sumGrid .sumVal{
+        font-size: 10px;
+        padding: 2px 2px 2px 6px;
+      }
+	  .sumGrid col.sumGrid-col-daily { width: 65px; }
+	  .sumGrid col.sumGrid-col-needed{ width: 55px; }
+	  .sumGrid col.sumGrid-col-left  { width: 55px; }
+
+      /* --- Meal cards --- */
+      .mealCard{ border-radius: 16px; }
+      .mealTop{ padding: 6px 8px 5px; }
+      .mealName{ font-size: 9px; }
+      .signBtn, .collapseBtn{ width: 26px; height: 26px; border-radius: 8px; font-size: 9px; }
+
+      /* --- Food table → single-row compact layout on mobile --- */
+
+      /* Foods section: fixed height window with vertical scroll */
+      .mealBodyFoods .table{ min-width: unset; }
+
+      /* Table + tbody as block so flex works on tr */
+      .mealBodyDay .table,
+      .mealBodyFoods .table{ display: block; }
+      .mealBodyDay .table thead,
+      .mealBodyFoods .table thead{ display: block; }
+      .mealBodyDay .table tbody,
+      .mealBodyFoods .table tbody{ display: block; }
+
+      /* Header row — same flex + gap as data rows so columns align exactly */
+      .mealBodyDay .table thead tr,
+      .mealBodyFoods .table thead tr{
+        display: flex; flex-wrap: nowrap; align-items: center;
+        gap: 3px; padding: 4px 0 3px 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+      }
+      .mealBodyDay .table thead th{
+        font-size: 9px; font-weight: 900; text-transform: uppercase;
+        letter-spacing: .3px; color: rgba(255,255,255,0.32);
+        padding: 0; background: none; border: none;
+        position: static; backdrop-filter: none;
+        text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .mealBodyFoods .table thead th{
+        font-size: 7px; font-weight: 900; text-transform: uppercase;
+        letter-spacing: .2px; color: rgba(255,255,255,0.32);
+        padding: 0; background: none; border: none;
+        position: static; backdrop-filter: none;
+        text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      /* Day column widths */
+      .mealBodyDay .table thead th:nth-child(1){ flex: 1 1 0; min-width: 0; text-align: left; }
+      .mealBodyDay .table thead th:nth-child(2){ flex: 0 0 46px; }
+      .mealBodyDay .table thead th:nth-child(3),
+      .mealBodyDay .table thead th:nth-child(4),
+      .mealBodyDay .table thead th:nth-child(5){ flex: 0 0 56px; }
+
+      /* Foods column widths: 1=Name 2=Protein 3=Fat 4=Calories 5=Type 6=Avl */
+      .mealBodyFoods .table thead th:nth-child(1){ flex: 1 1 0; min-width: 0; text-align: left; }
+      .mealBodyFoods .table thead th:nth-child(2){ flex: 0 0 40px; }
+      .mealBodyFoods .table thead th:nth-child(3){ flex: 0 0 35px; }
+      .mealBodyFoods .table thead th:nth-child(4){ flex: 0 0 40px; }
+      .mealBodyFoods .table thead th:nth-child(5){ flex: 0 0 61px; }
+      .mealBodyFoods .table thead th:nth-child(6){ flex: 0 0 25px; }
+
+      /* Data rows — same flex + gap as header */
+      .mealBodyDay .table tbody tr:not(.sumRow),
+      .mealBodyFoods .table tbody tr:not(.sumRow){
+        display: flex; flex-wrap: nowrap; align-items: center;
+        gap: 3px; padding: 4px 0 4px 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+
+      /* No cell borders, no padding (we control via flex) */
+      .mealBodyDay .table td,
+      .mealBodyFoods .table td{ border-bottom: none; padding: 1px 3px; background: none; }
+
+      /* Day column widths — must match header exactly */
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(1){ flex: 1 1 0; min-width: 0; }
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(2){ flex: 0 0 46px; }
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(3),
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(4),
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(5){ flex: 0 0 56px; }
+
+      /* Foods column widths — must match header exactly */
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(1){ flex: 1 1 0; min-width: 0; }
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(2){ flex: 0 0 40px; }
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(3){ flex: 0 0 35px; }
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(4){ flex: 0 0 40px; }
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(5){ flex: 0 0 61px; }
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(6){ flex: 0 0 25px; }
+
+      /* All inputs: same height, same font size, same color */
+      .mealBodyDay .table tbody tr:not(.sumRow) .cellInput{
+        width: 100%; height: 34px; font-size: 9px; font-weight: 900;
+        color: rgba(255,255,255,0.92); text-align: center;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.05);
+        padding: 0 6px;
+      }
+      .mealBodyFoods .table tbody tr:not(.sumRow) .cellInput{
+        width: 100%; height: 26px; font-size: 7px; font-weight: 900;
+        color: rgba(255,255,255,0.92); text-align: center;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.05);
+        padding: 0 4px;
+      }
+      /* Name left-aligned */
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(1) .cellInput,
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(1) .cellInput{
+        text-align: left;
+      }
+      /* Day nutrient chips: read-only, no border, no bg */
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(3) .cellInput,
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(4) .cellInput,
+      .mealBodyDay .table tbody tr:not(.sumRow) td:nth-child(5) .cellInput{
+        pointer-events: none; -webkit-user-select: none; user-select: none;
+        padding: 0 2px;
+      }
+      /* Foods Avl: tiny, no padding */
+      .mealBodyFoods .table tbody tr:not(.sumRow) td:nth-child(6) .cellInput{
+        padding: 0 2px;
+      }
+
+      /* Sum row — same flex + gap, plain numbers, no background */
+      .mealBodyDay .table tbody tr.sumRow,
+      .mealBodyFoods .table tbody tr.sumRow{
+        display: flex; flex-wrap: nowrap; align-items: center;
+        gap: 3px; padding: 5px 0 5px 8px;
+        background: none;
+        border-top: 1px solid rgba(255,255,255,0.10);
+      }
+      /* Override the base .sumRow td background */
+      .mealBodyDay .table tbody tr.sumRow td,
+      .mealBodyFoods .table tbody tr.sumRow td{ background: none; }
+      .mealBodyDay .table tbody tr.sumRow td:nth-child(1),
+      .mealBodyFoods .table tbody tr.sumRow td:nth-child(1){
+        flex: 1 1 0; min-width: 0;
+        font-size: 9px; font-weight: 900; color: rgba(255,255,255,0.92);
+        text-transform: uppercase; letter-spacing: .3px;
+      }
+      .mealBodyDay .table tbody tr.sumRow td:nth-child(2){ flex: 0 0 46px; }
+      .mealBodyDay .table tbody tr.sumRow td:nth-child(3),
+      .mealBodyDay .table tbody tr.sumRow td:nth-child(4),
+      .mealBodyDay .table tbody tr.sumRow td:nth-child(5){ flex: 0 0 56px; }
+      .mealBodyFoods .table tbody tr.sumRow td:nth-child(2){ flex: 0 0 40px; }
+      .mealBodyFoods .table tbody tr.sumRow td:nth-child(3){ flex: 0 0 35px; }
+      .mealBodyFoods .table tbody tr.sumRow td:nth-child(4){ flex: 0 0 40px; }
+      .mealBodyFoods .table tbody tr.sumRow td:nth-child(5){ flex: 0 0 61px; }
+      .mealBodyFoods .table tbody tr.sumRow td:nth-child(6){ flex: 0 0 25px; }
+      .mealBodyDay .table tbody tr.sumRow td .cellInput,
+      .mealBodyFoods .table tbody tr.sumRow td .cellInput{
+        width: 100%; height: 26px; font-size: 9px; font-weight: 900;
+        padding: 0 2px; text-align: center;
+        color: rgba(255,255,255,0.92);
+        background: none; border: none; border-radius: 0;
+        pointer-events: none;
+      }
+
+      /* No scroll cap on mobile — base max-height:2000px handles collapse animation */
+
+      /* --- FAB buttons: smaller --- */
+      .fabBtn{ height: 42px; min-width: 76px; font-size: 14px; padding: 0 14px; }
+      .fabStack{ gap: 7px; padding-right: 8px; }
+      .fabDock{ bottom: calc(var(--nav-total-h) + 8px); }
+
+      /* --- Nav: tighter --- */
+      .nav{
+	  padding:
+		6px
+		8px
+		max(6px, var(--safe-bottom));
+	}
+
+	.navBtn{
+	  height: 100%;
+	  font-size: 12px;
+	}
+
+      /* --- Card headers --- */
+      .cardHeader{ padding: 10px 12px 8px; }
+      .cardHeader h2{ font-size: 12px; }
+      .cardBody{ padding: 8px 10px 10px; }
+      .card{ border-radius: 24px; }
+
+      /* --- Flatpickr: more compact --- */
+      .flatpickr-calendar{ font-size: 12px !important; border-radius: 12px !important; width: 224px !important; }
+      .flatpickr-days{ width: 224px !important; }
+      .dayContainer{ width: 224px !important; min-width: 224px !important; max-width: 224px !important; }
+      .flatpickr-day{ border-radius: 6px !important; height: 32px !important; line-height: 32px !important; max-width: 32px !important; width: 32px !important; }
+      .flatpickr-months{ height: 28px !important; }
+      .flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month{ padding: 0 6px !important; }
+      .flatpickr-months .flatpickr-prev-month svg, .flatpickr-months .flatpickr-next-month svg{ width: 10px !important; height: 10px !important; }
+      .flatpickr-current-month{ font-size: 12px !important; }
+      .flatpickr-current-month .flatpickr-monthDropdown-months{ font-size: 12px !important; }
+      .flatpickr-current-month input.cur-year{ font-size: 12px !important; }
+      span.flatpickr-weekday{ font-size: 9px !important; height: 20px !important; line-height: 20px !important; }
+
+      span.flatpickr-weekday{ font-size: 10px !important; }
+
+      /* --- Autocomplete: compact inline dropdown (no bottom-sheet) --- */
+      .acMenu{
+        max-width: min(260px, calc(100vw - 24px)) !important;
+        max-height: 220px !important;
+        border-radius: 10px !important;
+      }
+      .acItem{
+        padding: 7px 9px;
+        font-size: 12px;
+        border-radius: 7px;
+      }
     }
 
-    @media (max-width: 640px){
-      .fabDockInner{ justify-content:flex-end; }
-      .fabStack{ width:auto; align-items:flex-end; }
-      .fabBtn{ width:auto; min-width:90px; }
-    }
+    /* ============================================================
+       SMALL PHONE  (≤ 508px)  — same 4-col layout, just smaller
+       ============================================================ */
+    @media (max-width: 508px){
+      .stickyPanel{
+        padding: 4px;
+        margin-bottom: 5px;
+        border-radius: 14px;
+      }
 
-    .settingsGrid{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-    @media (max-width: 820px){
-      .settingsGrid{ grid-template-columns: 1fr; }
-    }
+      .dayHeaderRow{
+        height: auto;
+        gap: clamp(0px, 1vw, 4px);
+      }
 
-    .metric{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 14px;
-      padding: 14px 14px;
-      border-radius: 22px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.10);
+      /* Date bubble */
+      .bubble.dateBubble{
+        padding: 2px 3px;
+        gap: 2px;
+        border-radius: 8px;
+      }
+      .dateInput{
+        width: 62px;
+        font-size: 9px;
+        height: 22px;
+        padding: 0 2px;
+        border-radius: 6px;
+      }
+      .iconBtn{
+        width: 20px;
+        height: 22px;
+        min-width: 20px;
+        font-size: 11px;
+        border-radius: 6px;
+      }
+
+      /* Weight bubble */
+      #weightBubble{
+        padding: 2px 5px;
+        gap: 3px;
+        border-radius: 8px;
+      }
+      .weightTitle .t1{ font-size: 8px; }
+      .weightInput{ width: 28px; height: 22px; font-size: 9px; padding: 0 2px; border-radius: 6px; }
+      .weightUnit{ font-size: 8px; }
+
+      /* Summary */
+      .sumTable{
+        padding: 2px 4px;
+        border-radius: 8px;
+        width: 160px;
+        flex: 0 0 160px;
+      }
+      .sumGrid .sumGrid-col-label{ width: 28px; }
+      .sumGrid thead th.sumTh{ font-size: 5px; padding: 0 1px 2px 4px; }
+      .sumGrid .sumRowLabel{ font-size: 6px; padding: 1px 2px 1px 0; }
+      .sumGrid .sumVal{ font-size: 8px; padding: 1px 1px 1px 4px; }
+	  
+	  .sumGrid col.sumGrid-col-daily { width: 38px; }
+	  .sumGrid col.sumGrid-col-needed{ width: 35px; }
+	  .sumGrid col.sumGrid-col-left  { width: 42px; }
+
+      /* Actions */
+      .dayActionsBubble{ width: 44px; padding: 3px; gap: 3px; border-radius: 8px; }
+      .dayActBtn{ font-size: 9px; padding: 0 3px; border-radius: 6px; }
+
+      /* --- Flatpickr: tiny --- */
+      .flatpickr-calendar{ font-size: 11px !important; border-radius: 10px !important; width: 182px !important; }
+      .flatpickr-days{ width: 182px !important; }
+      .dayContainer{ width: 182px !important; min-width: 182px !important; max-width: 182px !important; }
+      .flatpickr-day{ border-radius: 5px !important; height: 26px !important; line-height: 26px !important; max-width: 26px !important; width: 26px !important; font-size: 10px !important; }
+      .flatpickr-months{ height: 24px !important; }
+      .flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month{ padding: 0 5px !important; }
+      .flatpickr-months .flatpickr-prev-month svg, .flatpickr-months .flatpickr-next-month svg{ width: 8px !important; height: 8px !important; }
+      .flatpickr-current-month{ font-size: 11px !important; }
+      .flatpickr-current-month .flatpickr-monthDropdown-months{ font-size: 11px !important; }
+      .flatpickr-current-month input.cur-year{ font-size: 11px !important; }
+      span.flatpickr-weekday{ font-size: 8px !important; height: 18px !important; line-height: 18px !important; }
+      span.flatpickr-weekday{ font-size: 9px !important; }
+
+
+      /* --- Autocomplete: even more compact on tiny phones --- */
+      .acMenu{
+        max-width: min(210px, calc(100vw - 16px)) !important;
+        max-height: 170px !important;
+        border-radius: 8px !important;
+      }
+      .acItem{
+        padding: 5px 7px;
+        font-size: 10px;
+        border-radius: 5px;
+      }
     }
-
-    .metricTitle{
-      margin:0;
-      color: rgba(255,255,255,0.68);
-      font-weight: 900;
-      letter-spacing: .35px;
-      text-transform: uppercase;
-      font-size: 11px;
-      line-height: 1.1;
-    }
-
-    .metricValue{
-      margin:0;
-      font-weight: 980;
-      font-size: 16px;
-      color: rgba(255,255,255,0.92);
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-      text-align: right;
-      min-width: 72px;
-    }
-
-    .mealBodyDay{
-      overflow: hidden;
-      max-height: 520px;
-      transition: max-height .18s ease, opacity .18s ease;
-      opacity: 1;
-    }
-
-    .mealBodyFoods{
-      max-height: min(66vh, 520px);
-      overflow: auto;
-      transition: max-height .18s ease, opacity .18s ease;
-      opacity: 1;
-
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-      scrollbar-gutter: stable both-edges;
-
-      padding: 0;
-      border-top: 0;
-      background: transparent;
-    }
-
-    .foodsInner{
-      padding: 8px;
-      background: rgba(255,255,255,0.02);
-      border-top: 1px solid rgba(255,255,255,0.06);
-      box-sizing: border-box;
-    }
-
-    .mealBodyFoods .table{
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      border-radius: 16px;
-      overflow: hidden;
-    }
-
-    .mealBodyFoods .table th{
-      position: sticky;
-      top: 0;
-      z-index: 3;
-    }
-
-    .mealBodyFoods .table td,
-    .mealBodyFoods .table th{
-      background: rgba(255,255,255,0.02);
-    }
-
-    .mealBodyFoods .cellInput{
-      background: rgba(255,255,255,0.045);
-      border-color: rgba(255,255,255,0.12);
-    }
-    .mealBodyFoods .cellInput:focus{
-      border-color: rgba(108,231,255,0.35);
-    }
-
-    .mealBodyFoods::-webkit-scrollbar{ width: 10px; height: 10px; }
-    .mealBodyFoods::-webkit-scrollbar-track{
-      background: rgba(255,255,255,0.03);
-      border-radius: 999px;
-    }
-    .mealBodyFoods::-webkit-scrollbar-thumb{
-      background: rgba(255,255,255,0.18);
-      border-radius: 999px;
-      border: 2px solid rgba(0,0,0,0);
-      background-clip: padding-box;
-    }
-    .mealBodyFoods::-webkit-scrollbar-thumb:hover{
-      background: rgba(255,255,255,0.28);
-      border: 2px solid rgba(0,0,0,0);
-      background-clip: padding-box;
-    }
-
-    .mealBodyFoods{
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255,255,255,0.22) rgba(255,255,255,0.04);
-    }
-
-    @media (max-width: 640px){
-      .mealBodyFoods{ max-height: 58vh; }
-    }
-
-    .mealCard.animating .mealBodyFoods{ overflow: hidden !important; }
-
-    .mealCard.collapsed .mealBodyDay,
-    .mealCard.collapsed .mealBodyFoods{
-      max-height: 0;
-      overflow: hidden;
-      opacity: 0;
-      padding: 0;
-      border-top: 0;
-      background: transparent;
-    }
-
-    .mealCard.collapsed .mealTop{ border-bottom: 0; }
-
-    .mealCard.collapsed .foodsInner{
-      padding: 0;
-      border-top: 0;
-    }
-
-    .acMenu{
+    #ptrIndicator{
       position: fixed;
-      z-index: 99999;
-      width: 320px;
-      max-height: min(360px, 46vh);
-      overflow: auto;
-      background: rgba(15,18,30,0.96);
-      border: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 16px 50px rgba(0,0,0,0.45);
-      backdrop-filter: blur(14px);
-      border-radius: 16px;
-      padding: 6px;
-      display:none;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      z-index: 200;
+      background: linear-gradient(90deg,
+        rgba(46,242,168,0.0) 0%,
+        rgba(46,242,168,0.9) 30%,
+        rgba(108,231,255,0.9) 60%,
+        rgba(184,140,255,0.9) 80%,
+        rgba(46,242,168,0.0) 100%);
+      background-size: 200% 100%;
+      transform: scaleX(0);
+      transform-origin: left;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
     }
-    .acItem{
-      padding: 10px 10px;
-      border-radius: 12px;
-      font-weight: 900;
-      color: rgba(255,255,255,0.92);
-      cursor: pointer;
-      user-select: none;
-      line-height: 1.15;
+    #ptrIndicator.ptr-pulling{
+      opacity: 1;
+      transition: transform 0.05s linear, opacity 0.25s ease;
     }
-    .acItem:hover{ background: rgba(255,255,255,0.06); }
-    .acItem.active{ background: rgba(108,231,255,0.18); }
-
-    .acMenu::-webkit-scrollbar{ width: 10px; height: 10px; }
-    .acMenu::-webkit-scrollbar-track{
-      background: rgba(255,255,255,0.03);
-      border-radius: 999px;
+    #ptrIndicator.ptr-refreshing{
+      opacity: 1;
+      transform: scaleX(1) !important;
+      animation: ptrSlide 0.9s linear infinite;
     }
-    .acMenu::-webkit-scrollbar-thumb{
-      background: rgba(255,255,255,0.18);
-      border-radius: 999px;
-      border: 2px solid rgba(0,0,0,0);
-      background-clip: padding-box;
-    }
-    .acMenu::-webkit-scrollbar-thumb:hover{
-      background: rgba(255,255,255,0.28);
+    @keyframes ptrSlide{
+      0%  { background-position: 100% 0; }
+      100%{ background-position: -100% 0; }
     }
 
-    /* Flatpickr styling (unchanged from your original) */
+
+    /* ============================================================
+       FLATPICKR DARK THEME
+       ============================================================ */
     .flatpickr-calendar{
-      background: rgba(15,18,30,0.965);
-      border: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 22px 70px rgba(0,0,0,0.55);
-      backdrop-filter: blur(16px);
-      border-radius: 18px;
-      z-index: 99999;
-      overflow: visible;
-      width: 352px;
-      max-width: calc(100vw - 16px);
-      padding: 10px 12px 12px;
-      box-sizing: border-box;
+      background: rgba(11,16,32,0.97) !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.55) !important;
+      backdrop-filter: blur(16px) !important;
+      color: rgba(255,255,255,0.92) !important;
     }
-    .flatpickr-innerContainer,
-    .flatpickr-rContainer,
-    .flatpickr-days,
-    .dayContainer{
-      width: 100% !important;
-      min-width: 100% !important;
-      max-width: 100% !important;
-      overflow: visible !important;
-      box-sizing: border-box;
-    }
-    .flatpickr-months{
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 8px 10px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
+    .flatpickr-calendar.arrowTop::before,
+    .flatpickr-calendar.arrowTop::after,
+    .flatpickr-calendar.arrowBottom::before,
+    .flatpickr-calendar.arrowBottom::after{ display: none !important; }
 
-      display:flex !important;
-      align-items:center !important;
-      justify-content:space-between !important;
-      gap: 10px !important;
+    .flatpickr-months{
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      height: 36px !important;
     }
     .flatpickr-months .flatpickr-prev-month,
     .flatpickr-months .flatpickr-next-month{
-      position: relative !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      padding: 8px !important;
-      border-radius: 12px;
-      color: rgba(255,255,255,0.92) !important;
-      fill: rgba(255,255,255,0.92) !important;
-    }
-    .flatpickr-months .flatpickr-prev-month:hover,
-    .flatpickr-months .flatpickr-next-month:hover{
-      background: rgba(255,255,255,0.06);
-    }
-    .flatpickr-months .flatpickr-prev-month svg,
-    .flatpickr-months .flatpickr-next-month svg{
-      fill: rgba(255,255,255,0.92) !important;
-    }
-    .flatpickr-current-month{
-      position: relative !important;
-      top: 0 !important;
-      left: 0 !important;
-      transform: none !important;
-
-      color: rgba(255,255,255,0.92) !important;
-      font-weight: 950;
-      letter-spacing: .2px;
-
-      flex: 1 1 auto !important;
-      min-width: 0 !important;
+      position: static !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      gap: 8px !important;
+      height: 100% !important;
+      top: auto !important;
+    }
+    .flatpickr-months .flatpickr-month{
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      height: 100% !important;
+    }
+    .flatpickr-current-month{
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      position: static !important;
+      width: auto !important;
       padding: 0 !important;
-      line-height: 1 !important;
-      height: auto !important;
+      height: 100% !important;
     }
-    .flatpickr-current-month .cur-month{
+    .flatpickr-months .flatpickr-month,
+    .flatpickr-current-month,
+    .flatpickr-monthDropdown-months{
+      background: transparent !important;
       color: rgba(255,255,255,0.92) !important;
-      font-weight: 950 !important;
-      line-height: 1 !important;
-    }
-    .flatpickr-current-month input.cur-year{
-      color: rgba(255,255,255,0.92) !important;
-      font-weight: 950 !important;
-      background: rgba(255,255,255,0.06) !important;
-      border: 1px solid rgba(255,255,255,0.12) !important;
-      border-radius: 10px !important;
-      padding: 2px 10px !important;
-      outline: none !important;
-      box-shadow: none !important;
-      height: 28px !important;
-      line-height: 1 !important;
+      fill: rgba(255,255,255,0.92) !important;
     }
     .flatpickr-current-month .flatpickr-monthDropdown-months{
-      color: rgba(255,255,255,0.92) !important;
-      font-weight: 950 !important;
-      background: rgba(255,255,255,0.06) !important;
-      border: 1px solid rgba(255,255,255,0.12) !important;
-      border-radius: 10px !important;
-      padding: 2px 10px !important;
-      outline: none !important;
-      height: 28px !important;
-      line-height: 1 !important;
-      -webkit-appearance: none;
-      appearance: none;
-      width: 10.5ch !important;
-      transition: background 0.15s ease, border-color 0.15s ease;
+      background: transparent !important;
     }
-    .flatpickr-current-month .flatpickr-monthDropdown-months option{
-      background: rgba(15,18,30,0.98);
-      color: rgba(255,255,255,0.92);
+    .flatpickr-current-month .numInputWrapper span.arrowUp::after{
+      border-bottom-color: rgba(255,255,255,0.50) !important;
     }
-    .flatpickr-weekdays{
-      background: transparent;
-      border: 0;
-      margin-bottom: 4px;
+    .flatpickr-current-month .numInputWrapper span.arrowDown::after{
+      border-top-color: rgba(255,255,255,0.50) !important;
     }
-    .flatpickr-weekday{
-      color: rgba(255,255,255,0.90) !important;
-      font-weight: 900;
-      letter-spacing: .35px;
-      text-transform: uppercase;
-      font-size: 11px;
-      padding: 10px 0;
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month{
+      color: rgba(255,255,255,0.60) !important;
+      fill: rgba(255,255,255,0.60) !important;
     }
-    .flatpickr-days{ border-radius: 14px; }
+    .flatpickr-months .flatpickr-prev-month:hover,
+    .flatpickr-months .flatpickr-next-month:hover{
+      color: rgba(108,231,255,0.90) !important;
+      fill: rgba(108,231,255,0.90) !important;
+    }
+
+    .flatpickr-weekdays{ background: transparent !important; }
+    span.flatpickr-weekday{
+      background: transparent !important;
+      color: rgba(255,255,255,0.38) !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+    }
+
+    .flatpickr-days{ border-color: rgba(255,255,255,0.08) !important; }
+    .dayContainer{ border-color: rgba(255,255,255,0.08) !important; }
+
     .flatpickr-day{
-      color: rgba(255,255,255,0.92);
-      border-radius: 12px;
-      font-weight: 850;
-      height: 40px;
-      line-height: 40px;
-      margin: 2px;
+      color: rgba(255,255,255,0.85) !important;
+      border-color: transparent !important;
+      border-radius: 8px !important;
     }
     .flatpickr-day:hover{
-      background: rgba(108,231,255,0.16);
-      border-color: transparent;
+      background: rgba(108,231,255,0.12) !important;
+      border-color: transparent !important;
     }
     .flatpickr-day.today{
-      border-color: rgba(184,140,255,0.60);
-      box-shadow: 0 0 0 1px rgba(184,140,255,0.25) inset;
+      border-color: rgba(108,231,255,0.40) !important;
+      color: rgba(108,231,255,0.95) !important;
+    }
+    .flatpickr-day.today:hover{
+      background: rgba(108,231,255,0.12) !important;
     }
     .flatpickr-day.selected,
-    .flatpickr-day.startRange,
-    .flatpickr-day.endRange{
-      background: linear-gradient(135deg, rgba(108,231,255,0.95), rgba(184,140,255,0.90));
-      color: rgba(0,0,0,0.92);
-      border-color: transparent;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-    }
-    .flatpickr-day.inRange{
-      background: rgba(108,231,255,0.12);
-      border-color: transparent;
-    }
-    .flatpickr-day.prevMonthDay,
-    .flatpickr-day.nextMonthDay{
-      color: rgba(255,255,255,0.35);
+    .flatpickr-day.selected:hover{
+      background: linear-gradient(135deg, rgba(108,231,255,0.90), rgba(184,140,255,0.85)) !important;
+      border-color: transparent !important;
+      color: rgba(0,0,0,0.90) !important;
+      font-weight: 800 !important;
     }
     .flatpickr-day.flatpickr-disabled,
-    .flatpickr-day.flatpickr-disabled:hover{
-      color: rgba(255,255,255,0.22);
-      background: transparent;
-      cursor: not-allowed;
-    }
-    .flatpickr-calendar:before,
-    .flatpickr-calendar:after{ display:none; }
-    .flatpickr-months .flatpickr-month{ display: flex !important; overflow: visible; }
-    .flatpickr-months .flatpickr-prev-month.flatpickr-disabled,
-    .flatpickr-months .flatpickr-next-month.flatpickr-disabled{
-      display: block !important;
-      visibility: hidden !important;
+    .flatpickr-day.prevMonthDay,
+    .flatpickr-day.nextMonthDay{
+      color: rgba(255,255,255,0.20) !important;
       pointer-events: none !important;
-      opacity: 0 !important;
+      cursor: default !important;
     }
-    .flatpickr-monthDropdown-months,
-    .flatpickr-monthDropdown-months option{
-      background: rgba(15,18,30,0.98) !important;
+
+    .numInputWrapper:hover{ background: rgba(255,255,255,0.05) !important; }
+    .flatpickr-current-month input.cur-year{
       color: rgba(255,255,255,0.92) !important;
+      font-weight: 700 !important;
     }
-    .flatpickr-current-month .numInputWrapper span.arrowUp:after{
-      border-bottom-color: rgba(255,255,255,0.92) !important;
-    }
-    .flatpickr-current-month .numInputWrapper span.arrowDown:after{
-      border-top-color: rgba(255,255,255,0.92) !important;
-    }
-    .flatpickr-current-month .numInputWrapper span.arrowUp,
-    .flatpickr-current-month .numInputWrapper span.arrowDown{ opacity: 1 !important; }
-    .flatpickr-current-month .numInputWrapper span.fp-hide{
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
+    .flatpickr-monthDropdown-months option{
+      background: #0B1020 !important;
+      color: rgba(255,255,255,0.92) !important;
     }
   </style>
 </head>
 
 <body>
+  <div id="ptrIndicator"></div>
   <div class="toastWrap" id="toastWrap"></div>
 
   <div class="shell">
@@ -1139,30 +1550,58 @@
                         <div class="bubble" id="weightBubble">
                           <div class="weightTitle"><div class="t1">Weight</div></div>
                           <div class="weightInputWrap">
-                            <input class="weightInput" id="weightInput" inputmode="decimal" placeholder="0" />
+                            <input class="weightInput" id="weightInput" inputmode="decimal" placeholder="" />
                             <div class="weightUnit">kg</div>
                           </div>
                         </div>
                       </div>
 
                       <div class="dayHeaderRight">
-                        <div class="sumBubble" id="miniProtein">
-                          <div class="sumLine"><span class="k">Protein</span><span class="v" id="sumProtein">0</span></div>
-                          <div class="sumLine"><span class="k">Need</span><span class="v" id="needProtein">0</span></div>
-                          <div class="sumLine"><span class="k">Left</span><span class="v" id="leftProtein">0</span></div>
+                        <div class="sumTable" id="sumTableWrap">
+                          <table class="sumGrid">
+                            <colgroup>
+                              <col class="sumGrid-col-label">
+                              <col class="sumGrid-col-daily">
+                              <col class="sumGrid-col-needed">
+                              <col class="sumGrid-col-left">
+                            </colgroup>
+                            <thead>
+                              <tr>
+                                <th></th>
+                                <th class="sumTh">Daily</th>
+                                <th class="sumTh">Needed</th>
+                                <th class="sumTh">Left</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr id="miniProtein">
+                                <td class="sumRowLabel">Protein</td>
+                                <td class="sumVal" id="sumProtein">0</td>
+                                <td class="sumVal" id="needProtein">0</td>
+                                <td class="sumVal sumValLeft" id="leftProtein">0</td>
+                              </tr>
+                              <tr id="miniFat">
+                                <td class="sumRowLabel">Fat Cal</td>
+                                <td class="sumVal" id="sumFatCal">0</td>
+                                <td class="sumVal" id="needFatCal">0</td>
+                                <td class="sumVal sumValLeft" id="leftFatCal">0</td>
+                              </tr>
+                              <tr id="miniCalories">
+                                <td class="sumRowLabel">Calories</td>
+                                <td class="sumVal" id="sumCalories">0</td>
+                                <td class="sumVal" id="needCalories">0</td>
+                                <td class="sumVal sumValLeft" id="leftCalories">0</td>
+                              </tr>
+                            </tbody>
+                          </table>
                         </div>
+                      </div>
 
-                        <div class="sumBubble" id="miniFat">
-                          <div class="sumLine"><span class="k">Fat Cal</span><span class="v" id="sumFatCal">0</span></div>
-                          <div class="sumLine"><span class="k">Need</span><span class="v" id="needFatCal">0</span></div>
-                          <div class="sumLine"><span class="k">Left</span><span class="v" id="leftFatCal">0</span></div>
-                        </div>
-
-                        <div class="sumBubble" id="miniCalories">
-                          <div class="sumLine"><span class="k">Calories</span><span class="v" id="sumCalories">0</span></div>
-                          <div class="sumLine"><span class="k">Need</span><span class="v" id="needCalories">0</span></div>
-                          <div class="sumLine"><span class="k">Left</span><span class="v" id="leftCalories">0</span></div>
-                        </div>
+                      <div class="bubble dayActionsBubble" id="dayActionsBubble">
+                        <button class="dayActBtn" id="saveDayBtn" type="button">Save</button>
+                        <div class="dayActDivider"></div>
+                        <button class="dayActBtn" id="endBtn" type="button">End</button>
+                        <button class="dayActBtn" id="revertBtn" type="button">Revert</button>
                       </div>
                     </div>
                   </div>
@@ -1201,9 +1640,9 @@
               </div>
               <div class="cardBody">
                 <div class="chartCard"><canvas id="chartDaily"></canvas></div>
-                <div class="hr" style="margin:12px 0;"></div>
+                <div class="hr" style="margin:6px 0;"></div>
                 <div class="chartCard"><canvas id="chartWeeklyAvg"></canvas></div>
-                <div class="hr" style="margin:12px 0;"></div>
+                <div class="hr" style="margin:6px 0;"></div>
                 <div class="chartCard"><canvas id="chartWeeklyReduction"></canvas></div>
               </div>
             </div>
@@ -1222,6 +1661,10 @@
                     <div class="metric">
                       <p class="metricTitle">Calories offset</p>
                       <p class="metricValue"><span id="setDailyCalories">0</span></p>
+                    </div>
+					<div class="metric">
+                      <p class="metricTitle">Calorie type</p>
+                      <p class="metricValue"><span id="setDailyCalorieType">0</span></p>
                     </div>
                     <div class="metric">
                       <p class="metricTitle">Fat</p>
@@ -1258,6 +1701,18 @@
                   </div>
                 </div>
               </div>
+
+              <div class="card">
+                <div class="cardHeader"><h2>System</h2></div>
+                <div class="cardBody">
+                  <div class="summaryStack">
+                    <div class="metric">
+                      <p class="metricTitle">Timezone</p>
+                      <p class="metricValue"><span id="setTimezone">-</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1277,12 +1732,6 @@
 
     <div class="fabDock" id="fabDock">
       <div class="fabDockInner">
-        <div class="fabStack hidden" id="fabDay">
-          <button class="fabBtn" id="revertBtn" type="button">Revert</button>
-          <button class="fabBtn" id="endBtn" type="button">End</button>
-          <button class="fabBtn" id="saveDayBtn" type="button">Save</button>
-        </div>
-
         <div class="fabStack hidden" id="fabFoods">
           <button class="fabBtn" id="saveFoodsBtn" type="button">Save</button>
         </div>
@@ -1290,7 +1739,14 @@
     </div>
   </div>
 
-  <div class="acMenu" id="acMenu"></div>
+  <div class="acMenu" id="acMenu">
+    <div class="acMenuList" id="acMenuList"></div>
+    <div class="acScrollbar" id="acScrollbar">
+      <div class="acSbBtn" id="acSbUp">&#9650;</div>
+      <div class="acSbTrack" id="acSbTrack"><div class="acSbThumb" id="acSbThumb"></div></div>
+      <div class="acSbBtn" id="acSbDown">&#9660;</div>
+    </div>
+  </div>
 
   <script>
     const APP_BASE_PATH = "<!--APP_BASE_PATH-->";
@@ -1490,8 +1946,7 @@
     let fp = null;
     let mealUiState = { date: "", collapsed: {} };
 
-    let stickyIO = null;
-    let stickySentinel = null;
+    let _stickyScrollBound = false;
 
     let dayLoadSeq = 0;
     let dayLoadAbort = null;
@@ -1513,22 +1968,107 @@
 
     const ac = {
       menu: null,
+      list: null,
+      sb: null, sbThumb: null, sbTrack: null,
       input: null,
       items: [],
       activeIndex: -1,
       lastRenderKey: "",
-      closeTimer: null
+      closeTimer: null,
+      ignoreMouseEnter: false
     };
 
     function acInit(){
       ac.menu = $("#acMenu");
+
+      // Close on click/touch outside
       document.addEventListener("mousedown", (e) => {
-        if (!ac.menu) return;
+        if (!ac.menu || !ac.menu.classList.contains("open")) return;
         if (ac.menu.contains(e.target)) return;
-        if (ac.input && ac.input.contains && ac.input.contains(e.target)) return;
+        if (ac.input && ac.input === e.target) return;
         acHide();
       });
-      window.addEventListener("resize", () => acReposition());
+
+      document.addEventListener("touchstart", (e) => {
+        if (!ac.menu || !ac.menu.classList.contains("open")) return;
+        if (ac.menu.contains(e.target)) return;
+        if (ac.input && ac.input === e.target) return;
+        acHide();
+      }, { passive: true });
+
+      // Reposition on any scroll — capture phase catches all scrollable containers
+      document.addEventListener("scroll", () => {
+        acReposition();
+      }, { passive: true, capture: true });
+
+      // Also listen directly on the inner scroll container
+      const scroller = document.getElementById("contentScroll");
+      if (scroller){
+        scroller.addEventListener("scroll", () => {
+          acReposition();
+        }, { passive: true });
+      }
+
+      window.addEventListener("resize", () => {
+        acReposition();
+      });
+
+      // Custom scrollbar wiring
+      ac.list = $("#acMenuList");
+      ac.sb = $("#acScrollbar");
+      ac.sbThumb = $("#acSbThumb");
+      ac.sbTrack = $("#acSbTrack");
+
+      $("#acSbUp").addEventListener("mousedown", (e) => { e.preventDefault(); ac.list.scrollBy({ top: -36 }); acSbSync(); });
+      $("#acSbDown").addEventListener("mousedown", (e) => { e.preventDefault(); ac.list.scrollBy({ top: 36 }); acSbSync(); });
+      $("#acSbUp").addEventListener("touchstart", (e) => { e.preventDefault(); ac.list.scrollBy({ top: -36 }); acSbSync(); }, { passive: false });
+      $("#acSbDown").addEventListener("touchstart", (e) => { e.preventDefault(); ac.list.scrollBy({ top: 36 }); acSbSync(); }, { passive: false });
+
+      ac.list.addEventListener("scroll", () => acSbSync(), { passive: true });
+
+      // Thumb drag
+      let sbDragStartY = 0, sbDragStartScroll = 0;
+      function sbDragMove(e){
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const dy = clientY - sbDragStartY;
+        const trackH = ac.sbTrack.clientHeight;
+        const thumbH = ac.sbThumb.offsetHeight;
+        const scrollable = ac.list.scrollHeight - ac.list.clientHeight;
+        const ratio = scrollable / Math.max(1, trackH - thumbH);
+        ac.list.scrollTop = sbDragStartScroll + dy * ratio;
+        acSbSync();
+      }
+      function sbDragEnd(){
+        ac.sbThumb.classList.remove("dragging");
+        document.removeEventListener("mousemove", sbDragMove);
+        document.removeEventListener("mouseup", sbDragEnd);
+        document.removeEventListener("touchmove", sbDragMove);
+        document.removeEventListener("touchend", sbDragEnd);
+      }
+      ac.sbThumb.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        sbDragStartY = e.clientY;
+        sbDragStartScroll = ac.list.scrollTop;
+        ac.sbThumb.classList.add("dragging");
+        document.addEventListener("mousemove", sbDragMove);
+        document.addEventListener("mouseup", sbDragEnd);
+      });
+      ac.sbThumb.addEventListener("touchstart", (e) => {
+        sbDragStartY = e.touches[0].clientY;
+        sbDragStartScroll = ac.list.scrollTop;
+        ac.sbThumb.classList.add("dragging");
+        document.addEventListener("touchmove", sbDragMove, { passive: true });
+        document.addEventListener("touchend", sbDragEnd);
+      }, { passive: true });
+
+      // Track click (jump to position)
+      ac.sbTrack.addEventListener("mousedown", (e) => {
+        if (e.target === ac.sbThumb) return;
+        const rect = ac.sbTrack.getBoundingClientRect();
+        const ratio = (e.clientY - rect.top) / rect.height;
+        ac.list.scrollTop = ratio * (ac.list.scrollHeight - ac.list.clientHeight);
+        acSbSync();
+      });
     }
 
     function acGetOptions(kind){
@@ -1540,10 +2080,12 @@
 
     function acShowFor(input, kind, filterText){
       if (!ac.menu) return;
-      ac.input = input;
 
       clearTimeout(ac.closeTimer);
       ac.closeTimer = null;
+
+      const switchingInput = ac.input !== input;
+      ac.input = input;
 
       const all = acGetOptions(kind);
       const q = String(filterText || "").trim().toUpperCase();
@@ -1555,68 +2097,156 @@
 
       items = items.slice(0, 200);
 
+      if (switchingInput) ac.list.scrollTop = 0;
+
       const key = kind + "|" + q + "|" + items.length;
       if (key !== ac.lastRenderKey){
         ac.lastRenderKey = key;
         ac.items = items;
-        ac.activeIndex = items.length ? 0 : -1;
 
-        ac.menu.innerHTML = items.length
-          ? items.map((t, i) => `<div class="acItem ${i===0 ? "active":""}" data-i="${i}">${escapeHtml(t)}</div>`).join("")
+        ac.list.innerHTML = items.length
+          ? items.map((t, i) => `<div class="acItem" data-i="${i}">${escapeHtml(t)}</div>`).join("")
           : `<div class="acItem" style="opacity:.65; cursor:default;">No matches</div>`;
 
-        $$(".acItem[data-i]", ac.menu).forEach(el => {
-          el.addEventListener("mouseenter", () => {
-            const i = Number(el.dataset.i);
-            acSetActive(i);
-          });
+        $$(".acItem[data-i]", ac.list).forEach(el => {
+          // Desktop: hover to highlight — ignore until mouse actually moves
+          el.addEventListener("mouseenter", () => { if (!ac.ignoreMouseEnter) acSetActive(Number(el.dataset.i)); });
+
+          // Desktop: mousedown picks (before blur fires)
           el.addEventListener("mousedown", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const i = Number(el.dataset.i);
-            acPick(i);
+            acPick(Number(el.dataset.i));
+          });
+
+          // Mobile: touchend picks — only if the finger didn't scroll
+          el.addEventListener("touchstart", (e) => {
+            el._touchStartY = e.touches[0].clientY;
+            el._touchStartX = e.touches[0].clientX;
+          }, { passive: true });
+
+          el.addEventListener("touchend", (e) => {
+            const dy = Math.abs(e.changedTouches[0].clientY - (el._touchStartY || 0));
+            const dx = Math.abs(e.changedTouches[0].clientX - (el._touchStartX || 0));
+            if (dy > 8 || dx > 8) return; // was a scroll/swipe, not a tap
+            e.preventDefault();
+            e.stopPropagation();
+            acPick(Number(el.dataset.i));
           });
         });
       }
 
-      acReposition();
-      ac.menu.style.display = "block";
+      // Always reset to first item
+      ac.activeIndex = items.length ? 0 : -1;
+      if (ac.activeIndex === 0) acSetActive(0);
+      // Ignore mouseenter until the user actually moves the mouse (prevents
+      // the cursor already hovering over an item from overriding index 0)
+      ac.ignoreMouseEnter = true;
+
+      // Position BEFORE making visible so there's no jump
+      acRepositionForInput(input);
+      ac.menu.classList.add("open");
+      ac.list.scrollTop = 0; // reset after display:flex so it takes effect
+      // Re-position after scroll settles (keyboard/auto-scroll may shift the input)
+      setTimeout(() => { acReposition(); acSbSync(); }, 80);
+      // Clear ignoreMouseEnter on first real mouse movement
+      ac.list.addEventListener("mousemove", () => { ac.ignoreMouseEnter = false; }, { once: true });
+    }
+
+    function acRepositionForInput(input){
+      if (!ac.menu || !input) return;
+      const r = input.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      const vw = window.innerWidth;
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const menuW = Math.max(220, r.width);
+      let left = Math.max(8, r.left);
+      if (left + menuW > vw - 8) left = Math.max(8, vw - 8 - menuW);
+      const maxH = parseInt(getComputedStyle(ac.menu).maxHeight) || 320;
+      // list.scrollHeight is 0 while hidden — use maxH so up/down is correct
+      const menuH = maxH;
+      const spaceBelow = vh - r.bottom - 12;
+      const spaceAbove = r.top - 12;
+      let top;
+      if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
+        top = r.bottom + 6;
+      } else {
+        top = Math.max(8, r.top - menuH - 6);
+      }
+      ac.menu.style.left = left + "px";
+      ac.menu.style.top = top + "px";
+      ac.menu.style.width = menuW + "px";
     }
 
     function acReposition(){
       if (!ac.menu || !ac.input) return;
-      if (ac.menu.style.display !== "block") return;
+      if (!ac.menu.classList.contains("open")) return;
 
       const r = ac.input.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+
       const vw = window.innerWidth;
-      const left = Math.max(8, Math.min(r.left, vw - 8 - r.width));
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const menuW = Math.max(220, r.width);
+      let left = Math.max(8, r.left);
+      if (left + menuW > vw - 8) left = Math.max(8, vw - 8 - menuW);
+
+      const maxH = parseInt(getComputedStyle(ac.menu).maxHeight) || 320;
+      const menuH = Math.min(maxH, ac.list.scrollHeight + 8);
+
+      const spaceBelow = vh - r.bottom - 12;
+      const spaceAbove = r.top - 12;
+
+      let top;
+      if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
+        top = r.bottom + 6;
+      } else {
+        top = Math.max(8, r.top - menuH - 6);
+      }
 
       ac.menu.style.left = left + "px";
-      ac.menu.style.top = Math.min(window.innerHeight - 12, r.bottom + 6) + "px";
-      ac.menu.style.width = Math.max(220, r.width) + "px";
+      ac.menu.style.top = top + "px";
+      ac.menu.style.width = menuW + "px";
+      requestAnimationFrame(() => acSbSync());
     }
 
     function acHide(){
       if (!ac.menu) return;
-      ac.menu.style.display = "none";
+      ac.menu.classList.remove("open");
+      if (ac.sb) ac.sb.classList.remove("open");
       ac.input = null;
       ac.items = [];
       ac.activeIndex = -1;
       ac.lastRenderKey = "";
     }
 
+    function acSbSync(){
+      if (!ac.sb || !ac.list || !ac.sbThumb || !ac.sbTrack) return;
+      const scrollable = ac.list.scrollHeight - ac.list.clientHeight;
+      if (scrollable <= 0){
+        ac.sb.classList.add("sb-hidden");
+        return;
+      }
+      ac.sb.classList.remove("sb-hidden");
+      const trackH = ac.sbTrack.clientHeight;
+      const thumbH = Math.max(16, Math.round((ac.list.clientHeight / ac.list.scrollHeight) * trackH));
+      const thumbTop = Math.round((ac.list.scrollTop / scrollable) * (trackH - thumbH));
+      ac.sbThumb.style.height = thumbH + "px";
+      ac.sbThumb.style.top = thumbTop + "px";
+    }
+
     function acSetActive(i){
       ac.activeIndex = i;
-      $$(".acItem[data-i]", ac.menu).forEach(el => el.classList.toggle("active", Number(el.dataset.i) === i));
+      $$(".acItem[data-i]", ac.list).forEach(el => el.classList.toggle("active", Number(el.dataset.i) === i));
 
-      const activeEl = $(`.acItem[data-i="${i}"]`, ac.menu);
+      const activeEl = $(`.acItem[data-i="${i}"]`, ac.list);
       if (activeEl){
         const top = activeEl.offsetTop;
         const bottom = top + activeEl.offsetHeight;
-        const viewTop = ac.menu.scrollTop;
-        const viewBottom = viewTop + ac.menu.clientHeight;
-        if (top < viewTop) ac.menu.scrollTop = top;
-        else if (bottom > viewBottom) ac.menu.scrollTop = bottom - ac.menu.clientHeight;
+        const viewTop = ac.list.scrollTop;
+        const viewBottom = viewTop + ac.list.clientHeight;
+        if (top < viewTop) ac.list.scrollTop = top;
+        else if (bottom > viewBottom) ac.list.scrollTop = bottom - ac.list.clientHeight;
       }
     }
 
@@ -1642,11 +2272,14 @@
         acShowFor(input, kind, input.value);
       });
 
+      // Reopen on click if already focused
       input.addEventListener("click", () => {
         if (input.disabled) return;
         clearTimeout(ac.closeTimer);
         ac.closeTimer = null;
-        acShowFor(input, kind, input.value);
+        if (ac.menu && !ac.menu.classList.contains("open")){
+          acShowFor(input, kind, input.value);
+        }
       });
 
       input.addEventListener("input", () => {
@@ -1655,7 +2288,7 @@
       });
 
       input.addEventListener("keydown", (e) => {
-        if (!ac.menu || ac.menu.style.display !== "block") return;
+        if (!ac.menu || !ac.menu.classList.contains("open")) return;
 
         if (e.key === "ArrowDown"){
           e.preventDefault();
@@ -1671,12 +2304,30 @@
         } else if (e.key === "Escape"){
           e.preventDefault();
           acHide();
+        } else if (e.key === "Tab"){
+          // On tab, pick current active item before moving focus
+          if (ac.activeIndex >= 0){
+            acPick(ac.activeIndex);
+          } else {
+            acHide();
+          }
         }
       });
 
-      input.addEventListener("blur", () => {
+      input.addEventListener("blur", (e) => {
         clearTimeout(ac.closeTimer);
-        ac.closeTimer = setTimeout(() => acHide(), 120);
+        ac.closeTimer = setTimeout(() => {
+          const focused = document.activeElement;
+          // If focus moved to another autocomplete input, don't hide
+          if (focused && focused.__acBound){
+            return;
+          }
+          // If focus is inside the menu itself, don't hide
+          if (ac.menu && ac.menu.contains(focused)){
+            return;
+          }
+          acHide();
+        }, 220);
       });
     }
 
@@ -1715,13 +2366,16 @@
         card.classList.toggle("collapsed");
         sync();
 
-        const done = () => {
+        const done = (e) => {
+          if (e.propertyName !== "max-height") return;
           card.classList.remove("animating");
           body.removeEventListener("transitionend", done);
           requestAnimationFrame(() => forceResponsiveReflow());
         };
         body.addEventListener("transitionend", done);
       }
+
+      card.__collapseToggle = toggle;
 
       header.addEventListener("click", (e) => {
         if (e.target && e.target.closest && e.target.closest("[data-collapse-btn]")) return;
@@ -1880,6 +2534,7 @@
       $$(".navBtn").forEach(b => b.classList.toggle("active", b.dataset.view === name));
 
       if (name === "Day"){
+        _stuckThreshold = null; // re-measure now panel is visible
         enableStickyObserver();
         syncStickyNowNoAnim();
       } else {
@@ -1896,17 +2551,23 @@
       const isFoods = $("#viewFoods").classList.contains("active");
       const dayClosed = !!currentDayDayClosed;
 
-      $("#fabDay").classList.toggle("hidden", !(isDay && !dayClosed));
+      // Foods fab unchanged
       $("#fabFoods").classList.toggle("hidden", !isFoods);
 
-      const isOpenToday = (!dayClosed && currentDayDdmmyyyy === todayDdmmyyyy());
-      const isOpenTomorrow = (!dayClosed && currentDayDdmmyyyy === tomorrowDdmmyyyy());
-
+      // Day action buttons inside sticky bubble
+      const saveDayBtn = $("#saveDayBtn");
       const endBtn = $("#endBtn");
       const revertBtn = $("#revertBtn");
+      const divider = $(".dayActDivider", $("#dayActionsBubble"));
 
-      if (endBtn) endBtn.classList.toggle("hidden", !isOpenToday);
-      if (revertBtn) revertBtn.classList.toggle("hidden", !isOpenTomorrow);
+      const isOpenToday    = (!dayClosed && currentDayDdmmyyyy === todayDdmmyyyy());
+      const isOpenTomorrow = (!dayClosed && currentDayDdmmyyyy === tomorrowDdmmyyyy());
+      const showDayActions = isDay && !dayClosed;
+
+      if (saveDayBtn) saveDayBtn.classList.toggle("hidden", !showDayActions);
+      if (endBtn)     endBtn.classList.toggle("hidden",     !(showDayActions && isOpenToday));
+      if (revertBtn)  revertBtn.classList.toggle("hidden",  !(showDayActions && isOpenTomorrow));
+      if (divider)    divider.classList.toggle("hidden",    !(showDayActions && (isOpenToday || isOpenTomorrow)));
     }
 
     function rebuildCombosFromFoods(f){
@@ -1957,54 +2618,58 @@
       return !name && !weight && !p && !f && !c;
     }
 
-    function ensureTrailingEmptyRowsForMeal(tbody, buildRowFn){
-      const rows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
-      const empties = rows.filter(isMealRowEmpty);
+    // Compact: remove ALL interior empty rows (gap-fill), keep exactly one trailing empty.
+    // Deferred with requestAnimationFrame to avoid removing a node that still owns focus/blur.
+    function compactAndEnsureTrailing(tbody, buildRowFn){
+      requestAnimationFrame(() => {
+        if (!tbody.isConnected) return;
 
-      while (empties.length > 1){
-        empties.pop().remove();
-      }
+        const all = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
+        if (all.length === 0) return;
 
-      const hasEmpty = $$("tr", tbody)
-        .filter(tr => !tr.classList.contains("sumRow"))
-        .some(isMealRowEmpty);
-
-      if (!hasEmpty){
         const sumRow = $("tr.sumRow", tbody);
-        const newTr = buildRowFn();
-        if (sumRow) tbody.insertBefore(newTr, sumRow);
-        else tbody.appendChild(newTr);
-      }
+
+        // Don't remove the row that currently has focus — removing it blurs the input
+        // which triggers another compactAndEnsureTrailing and hides the autocomplete
+        const focusedRow = document.activeElement ? document.activeElement.closest("tr") : null;
+
+        // Separate non-empty and empty rows (preserving order of non-empty)
+        const nonEmpty = all.filter(tr => !isMealRowEmpty(tr));
+        const emptyRows = all.filter(tr => isMealRowEmpty(tr));
+
+        // Remove all empty rows except keep at most one at the end
+        // Never remove the row that currently has focus
+        emptyRows.forEach(tr => { if (tr.isConnected && tr !== focusedRow) tr.remove(); });
+
+        // Re-read after removal
+        const remaining = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
+
+        // If we removed the only trailing empty, add one back (unless at max capacity)
+        const hasTrailing = remaining.length > 0 && isMealRowEmpty(remaining[remaining.length - 1]);
+        if (!hasTrailing && nonEmpty.length < 5){
+          const newTr = buildRowFn();
+          if (sumRow && sumRow.isConnected) tbody.insertBefore(newTr, sumRow);
+          else tbody.appendChild(newTr);
+        }
+
+        // Enforce max 5 data rows + 1 trailing empty = 6 total
+        const afterAll = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
+        while (afterAll.length > 6){
+          const last = afterAll.pop();
+          if (last.isConnected && isMealRowEmpty(last)) last.remove();
+          else break;
+        }
+      });
+    }
+
+    function ensureTrailingEmptyRowsForMeal(tbody, buildRowFn){
+      // Legacy call sites — delegate to the safe deferred version
+      compactAndEnsureTrailing(tbody, buildRowFn);
     }
 
     function enforceMax5Rows(tbody){
-      const rows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
-      let empties = rows.filter(isMealRowEmpty);
-
-      while (empties.length > 1){
-        empties.pop().remove();
-        empties = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow") && isMealRowEmpty(tr));
-      }
-
-      let allRows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
-      while (allRows.length > 5){
-        const last = allRows[allRows.length - 1];
-        if (isMealRowEmpty(last)){
-          last.remove();
-          allRows = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
-        }else{
-          break;
-        }
-      }
-
-      const nonEmptyNow = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow") && !isMealRowEmpty(tr));
-      const emptyNow = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow") && isMealRowEmpty(tr));
-
-      if (nonEmptyNow.length <= 4 && emptyNow.length === 0){
-        const sumRow = $("tr.sumRow", tbody);
-        const empty = tbody.__buildRowEmpty ? tbody.__buildRowEmpty() : null;
-        if (empty && sumRow) tbody.insertBefore(empty, sumRow);
-      }
+      // Now a no-op: compactAndEnsureTrailing handles everything
+      // Kept for call-site compatibility
     }
 
     function mealCardByName(name){
@@ -2107,17 +2772,21 @@
         sumMeal(mealName);
 
         const tbody = tr.closest("tbody");
-        ensureTrailingEmptyRowsForMeal(tbody, () => {
-          const empty = document.createElement("tr");
-          empty.innerHTML = `
-            <td><input class="cellInput" value="" /></td>
-            <td class="num"><input class="cellInput" inputmode="decimal" value="" placeholder="" /></td>
-            <td class="num"><input class="cellInput" disabled value="" /></td>
-            <td class="num"><input class="cellInput" disabled value="" /></td>
-            <td class="num"><input class="cellInput" disabled value="" /></td>
-          `;
-          return empty;
-        });
+        ensureTrailingEmptyRowsForMeal(tbody,
+          typeof tbody.__buildRowEmpty === "function"
+            ? tbody.__buildRowEmpty
+            : () => {
+                const empty = document.createElement("tr");
+                empty.innerHTML = `
+                  <td><input class="cellInput" value="" /></td>
+                  <td class="num"><input class="cellInput" inputmode="decimal" value="" placeholder="" /></td>
+                  <td class="num"><input class="cellInput" disabled value="" /></td>
+                  <td class="num"><input class="cellInput" disabled value="" /></td>
+                  <td class="num"><input class="cellInput" disabled value="" /></td>
+                `;
+                return empty;
+              }
+        );
 
         enforceMax5Rows(tbody);
       });
@@ -2192,13 +2861,20 @@
       $("#leftFatCal").textContent = leftFat;
       $("#leftCalories").textContent = leftCalories;
 
-      setMiniState($("#miniProtein"), leftProtein <= 0);
-      setMiniState($("#miniFat"), leftFat >= 0);
-      setMiniState($("#miniCalories"), leftCalories >= 0);
+      const calorieType = settings.daily.calorie_type;
+      setMiniState($("#miniProtein"),  leftProtein  <= 0);
+      setMiniState($("#miniFat"),      leftFat      >= 0);
+      setMiniState($("#miniCalories"), calorieType === "deficit" ? leftCalories >= 0 : leftCalories <= 0);
     }
 
     function collectUiDraftDay(){
-      const weight = Number($("#weightInput").value || 0);
+      const rawWeight = $("#weightInput").value.trim();
+      if (rawWeight !== "" && isNaN(Number(rawWeight))){
+        const wi = $("#weightInput");
+        if (wi){ wi.focus(); wi.select(); }
+        throw new Error("Weight must be a number");
+      }
+      const weight = Number(rawWeight || 0);
 
       const meals = [];
       $$("#viewDay .mealCard").forEach(card => {
@@ -2214,14 +2890,31 @@
           const f = $("td:nth-child(4) input", tr).value.trim();
           const c = $("td:nth-child(5) input", tr).value.trim();
 
-          if (!name) return;
+          if (!name) {
+            if (w !== "") {
+              const nameInput = $("td:nth-child(1) input", tr);
+              if (nameInput) { nameInput.focus(); nameInput.select(); }
+              throw new Error("A row has a weight but no food name");
+            }
+            return;
+          }
 
           const up = name.toUpperCase();
           if (!(up in foodsMap) && !(up in groups)){
             throw new Error("Food Doesn't Exist: " + name);
           }
 
-          if (w === "" && !(up in groups)) return;
+          if (w === "" && !(up in groups)){
+            const wInput = $("td:nth-child(2) input", tr);
+            if (wInput) { wInput.focus(); wInput.select(); }
+            throw new Error("Missing weight for: " + name);
+          }
+
+          if (w !== "" && isNaN(Number(w))){
+            const wInput = $("td:nth-child(2) input", tr);
+            if (wInput) { wInput.focus(); wInput.select(); }
+            throw new Error("Invalid weight for: " + name);
+          }
 
           foods.push({ name, weight: w, protein: p, fat: f, calories: c });
         });
@@ -2294,7 +2987,14 @@
 
     async function saveDay(){
       try{
-        const payload = collectDayPayload();
+        let payload;
+        try{
+          payload = collectDayPayload();
+        }catch(ve){
+          toast("err", ve.message || "Validation error");
+          return;
+        }
+		console.log(payload);
         await apiPatch("days/" + currentDayDdmmyyyy, payload);
         toast("ok", "Saved Successfully");
         snapshotMealCollapse();
@@ -2387,11 +3087,11 @@
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>
-              <input class="cellInput" ${locked ? "disabled" : ""} value="${escapeHtml(food?.name || "")}" placeholder="" />
+              <input class="cellInput" ${locked ? "disabled" : ""} value="${escapeHtml(food?.name || "")}" placeholder="" type="search"/>
             </td>
             <td class="num">
               <input class="cellInput" ${locked ? "disabled" : ""} inputmode="decimal"
-                value="${escapeHtml(food?.weight || "")}" placeholder="" />
+                value="${escapeHtml(food?.weight ?? "")}" placeholder="" type="search"/>
             </td>
             <td class="num"><input class="cellInput" disabled value="${escapeHtml(food?.protein ?? "")}" /></td>
             <td class="num"><input class="cellInput" disabled value="${escapeHtml(food?.fat ?? "")}" /></td>
@@ -2490,11 +3190,14 @@
             nameInput.addEventListener("change", updateRowNutrition);
             nameInput.addEventListener("blur", updateRowNutrition);
             wInput.addEventListener("input", updateRowNutrition);
+            wInput.addEventListener("blur", updateRowNutrition);
           }
 
           return tr;
         }
 
+        // Assign BEFORE rendering foods so propagateGroupRow (called inside
+        // buildRow via updateGroupMealTotals) can already use it
         tbody.__buildRowEmpty = () => buildRow(null);
 
         const foods = Array.isArray(meal.foods) ? meal.foods : [];
@@ -2578,7 +3281,28 @@
                 m.meal_closed = !!mealClosedState[m.name];
               });
 
-              renderDay(draftRender);
+              // Animate the card before re-rendering so the collapse looks smooth
+              const isCollapsing = next; // signing = collapsing, unsigning = expanding
+              const currentCard = signBtn.closest(".mealCard");
+              const cardBody = currentCard && currentCard.querySelector(".mealBodyDay, .mealBodyFoods");
+              const alreadyCollapsed = currentCard && currentCard.classList.contains("collapsed");
+
+              if (currentCard && cardBody && !alreadyCollapsed && isCollapsing){
+                // Animate collapse, then re-render after transition
+                currentCard.classList.add("animating");
+                currentCard.classList.add("collapsed");
+                const done = (ev) => {
+                  if (ev.propertyName !== "max-height") return;
+                  currentCard.classList.remove("animating");
+                  cardBody.removeEventListener("transitionend", done);
+                  renderDay(draftRender);
+                };
+                cardBody.addEventListener("transitionend", done);
+                // Safety fallback in case transitionend doesn't fire
+                setTimeout(() => { cardBody.removeEventListener("transitionend", done); renderDay(draftRender); }, 400);
+              } else {
+                renderDay(draftRender);
+              }
             }catch(err){
               toast("err", err.message || "Failed");
             }
@@ -2615,7 +3339,13 @@
         startDateDdmmyyyy = settings.start_date;
         startDateObj = parseDdmmyyyy(startDateDdmmyyyy);
 
+        const calorieType = settings.daily.calorie_type;
+        if (calorieType !== "deficit" && calorieType !== "surplus"){
+          throw new Error(`Invalid calorie_type "${calorieType}": must be "deficit" or "surplus"`);
+        }
+
         $("#setDailyCalories").textContent = settings.daily.calories;
+		$("#setDailyCalorieType").textContent = calorieType;
         $("#setDailyFat").textContent = settings.daily.fat;
         $("#setDailyProtein").textContent = settings.daily.protein;
         $("#setTdee").textContent = settings.daily.tdee_multiplier;
@@ -2623,6 +3353,8 @@
         $("#setBirth").textContent = dateInputFromDdmmyyyy(settings.person.birth_day);
         $("#setGender").textContent = settings.person.gender;
         $("#setHeight").textContent = settings.person.height;
+
+        $("#setTimezone").textContent = settings.timezone_name || "-";
 
         clearViewError("Settings");
       }catch(e){
@@ -2724,6 +3456,8 @@
           `;
 
           $$("input", tr).forEach(i => i.addEventListener("input", ensureFoodTrailingEmptyRow));
+          // Select full text on focus for avl (last column) so typing replaces it directly
+          $("td:last-child input", tr).addEventListener("focus", function(){ this.select(); });
           return tr;
         }
 
@@ -2753,6 +3487,17 @@
             const [name, protein, fat, calories, innerType, available] = vals;
 
             if (!name && !protein && !fat && !calories && !innerType && !available) return;
+
+            if (!name && (protein || fat || calories)) {
+              const nameInput = $("td:nth-child(1) input", tr);
+              if (nameInput) { nameInput.focus(); nameInput.select(); }
+              throw new Error("A row has values but no food name");
+            }
+            if (name && (!protein && !fat && !calories)) {
+              const proteinInput = $("td:nth-child(2) input", tr);
+              if (proteinInput) { proteinInput.focus(); proteinInput.select(); }
+              throw new Error("Missing nutritional values for: " + name);
+            }
             foodsForAPI.push({ type, name, protein, fat, calories, inner_type: innerType, available });
           });
         });
@@ -2876,7 +3621,7 @@
     function renderDay(day){
       currentDayDayClosed = !!day.day_closed;
 
-      $("#weightInput").value = String(day.weight ?? 0);
+      $("#weightInput").value = day.weight != null ? String(day.weight) : "";
       $("#weightInput").disabled = !!day.day_closed;
 
       if (Array.isArray(day.meals)){
@@ -2949,7 +3694,7 @@
           chartDaily = new Chart($("#chartDaily"), {
             type: "line",
             data: { labels: dailyLabels, datasets: [{ label:"Weight", data: dailyData, pointRadius:3, tension:0.25 }] },
-            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } } } }
+            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } }, x:{ ticks:{ maxRotation: 90, minRotation: 45, autoSkip: false, font:{ size: 9 } } } } }
           });
         } else {
           chartDaily.data.labels = dailyLabels;
@@ -3014,30 +3759,43 @@
       el.title = open ? "Open day" : "Closed day";
     }
 
-    function enableStickyObserver(){
+    // Cache the scroll threshold once (panel's natural distance from scroller content top)
+    let _stuckThreshold = null;
+    function getStuckThreshold(){
+      if (_stuckThreshold !== null) return _stuckThreshold;
       const panel = document.getElementById("dayStickyPanel");
-      if (!panel || !stickyIO || !stickySentinel) return;
-      stickyIO.observe(stickySentinel);
+      const scroller = document.getElementById("contentScroll");
+      if (!panel || !scroller) return 0;
+      // Temporarily remove is-stuck to measure natural position
+      const wasStuck = panel.classList.contains("is-stuck");
+      panel.classList.remove("is-stuck");
+      // Walk offsetParent chain until we hit the scroller
+      let el = panel, dist = 0;
+      while (el && el !== scroller) { dist += el.offsetTop; el = el.offsetParent; }
+      if (wasStuck) panel.classList.add("is-stuck");
+      _stuckThreshold = Math.max(0, dist - 2);
+      return _stuckThreshold;
     }
 
-    function disableStickyObserver(){
-      if (!stickyIO) return;
-      stickyIO.disconnect();
-    }
-
-    function syncStickyNowNoAnim(){
+    function updateStuck(noAnim){
       const panel = document.getElementById("dayStickyPanel");
       const scroller = document.getElementById("contentScroll");
       if (!panel || !scroller) return;
-
-      panel.classList.add("noTrans");
-
-      const stuck = scroller.scrollTop > 0;
-      panel.classList.toggle("is-stuck", stuck);
-
-      panel.offsetHeight;
-      requestAnimationFrame(() => panel.classList.remove("noTrans"));
+      if (noAnim) panel.classList.add("noTrans");
+      panel.classList.toggle("is-stuck", scroller.scrollTop >= getStuckThreshold());
+      if (noAnim){ panel.offsetHeight; requestAnimationFrame(() => panel.classList.remove("noTrans")); }
     }
+
+    function enableStickyObserver(){
+      const scroller = document.getElementById("contentScroll");
+      if (!scroller || _stickyScrollBound) return;
+      _stickyScrollBound = true;
+      scroller.addEventListener("scroll", () => updateStuck(false), { passive: true });
+    }
+
+    function disableStickyObserver(){ /* scroll listener persists harmlessly when Day is hidden */ }
+
+    function syncStickyNowNoAnim(){ updateStuck(true); }
 
     function wireUI(){
       $$(".navBtn").forEach(btn => {
@@ -3050,6 +3808,20 @@
       $("#revertBtn").addEventListener("click", async () => revertDay());
 
       $("#weightInput").addEventListener("input", () => computeAllTotals());
+      $("#weightInput").addEventListener("focus", () => {
+        const w = $("#weightInput");
+        w._prevWeight = w.value;
+        if (w.value === "0" || w.value === "0.0" || w.value === "0.00") {
+          w.value = "";
+        }
+      });
+      $("#weightInput").addEventListener("blur", () => {
+        const w = $("#weightInput");
+        if (w.value.trim() === "") {
+          w.value = w._prevWeight || "";
+          computeAllTotals();
+        }
+      });
 
       let reflowTimer = null;
       window.addEventListener("resize", () => {
@@ -3081,30 +3853,6 @@
         await loadFoods();
         await loadOpenDay();
 
-        function initStickyStuckClass(){
-          const panel = document.getElementById("dayStickyPanel");
-          const scroller = document.getElementById("contentScroll");
-          if (!panel || !scroller) return;
-
-          if (!stickySentinel){
-            stickySentinel = document.createElement("div");
-            stickySentinel.style.position = "relative";
-            stickySentinel.style.height = "1px";
-            panel.parentNode.insertBefore(stickySentinel, panel);
-          }
-
-          if (!stickyIO){
-            stickyIO = new IntersectionObserver(
-              ([entry]) => {
-                panel.classList.toggle("is-stuck", !entry.isIntersecting);
-              },
-              { root: scroller, threshold: [1] }
-            );
-          }
-        }
-
-        initStickyStuckClass();
-
         setActiveView("Day");
         updateFloatingActions();
         forceResponsiveReflow();
@@ -3116,6 +3864,126 @@
     }
 
     boot();
+
+    /* ============================================================
+       MOBILE ENHANCEMENTS
+       ============================================================ */
+
+    // Patch forceResponsiveReflow to clear any stale inline display styles
+    // on nutrient cells when resizing back to desktop
+    const _origForceReflow = forceResponsiveReflow;
+    window.forceResponsiveReflow = function(){
+      _origForceReflow();
+      if (window.innerWidth > 640){
+        $$("#viewDay .mealBodyDay tbody tr td, #viewDay .mealBodyFoods tbody tr td").forEach(td => {
+          td.style.display = "";
+          td.style.alignItems = "";
+          td.style.gap = "";
+        });
+      }
+    };
+
+    // Also patch the MutationObserver (kept for future use / chart reflow)
+    const _observer = new MutationObserver(() => {
+      // intentionally empty — CSS ::before handles mobile labels
+    });
+    const mealsWrap = $("#mealsWrap");
+    if (mealsWrap){
+      _observer.observe(mealsWrap, { childList: true, subtree: true });
+    }
+
+    /* --- Pull-to-refresh ---
+       Detects a downward swipe at the top of the scroll container.
+       Calls location.reload() after a brief animation.           */
+    (function initPTR(){
+      const scroller = $("#contentScroll");
+      const indicator = $("#ptrIndicator");
+      if (!scroller || !indicator) return;
+
+      const THRESHOLD = 72;   // px of pull needed to trigger
+      const MAX_PULL  = 110;  // cap on visual progress
+      let startY = 0;
+      let pulling = false;
+      let triggered = false;
+
+      scroller.addEventListener("touchstart", e => {
+        if (scroller.scrollTop > 2) return;
+        // Don't start PTR if the touch is inside a scrollable inner section
+        const inner = e.target.closest(".foodsInner");
+        if (inner && inner.scrollHeight > inner.clientHeight) return;
+        startY = e.touches[0].clientY;
+        pulling = false;
+        triggered = false;
+      }, { passive: true });
+
+      scroller.addEventListener("touchmove", e => {
+        if (triggered) return;
+        // Suppress PTR if gesture is inside a foodsInner (even if it hit top)
+        if (e.target.closest(".foodsInner")) { pulling = false; return; }
+        const dy = e.touches[0].clientY - startY;
+        if (dy <= 0){
+          if (pulling) {
+            pulling = false;
+            indicator.classList.remove("ptr-pulling");
+            indicator.style.transform = "scaleX(0)";
+          }
+          return;
+        }
+        if (scroller.scrollTop > 2){ pulling = false; return; }
+
+        pulling = true;
+        const progress = Math.min(dy / MAX_PULL, 1);
+        indicator.style.transform = `scaleX(${progress})`;
+        indicator.classList.add("ptr-pulling");
+        indicator.classList.remove("ptr-refreshing");
+
+        if (dy > 10 && e.cancelable) e.preventDefault();
+      }, { passive: false });
+
+      scroller.addEventListener("touchend", () => {
+        if (!pulling) return;
+        const scaleMatch = indicator.style.transform.match(/scaleX\(([^)]+)\)/);
+        const progress = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
+        pulling = false;
+
+        if (progress >= THRESHOLD / MAX_PULL){
+          triggered = true;
+          indicator.classList.remove("ptr-pulling");
+          indicator.classList.add("ptr-refreshing");
+          setTimeout(() => location.reload(), 600);
+        } else {
+          indicator.classList.remove("ptr-pulling");
+          indicator.style.transform = "scaleX(0)";
+        }
+      }, { passive: true });
+    })();
+
   </script>
+<script>
+(function initKeyboardFix(){
+  function isKeyboardOpen(){
+    if (!window.visualViewport) return false;
+    if (window.visualViewport.offsetTop > 10) return true;
+    return window.visualViewport.height < window.screen.height * 0.72;
+  }
+
+  function onViewportChange(){
+    document.body.classList.toggle("keyboard-open", isKeyboardOpen());
+  }
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", onViewportChange, { passive: true });
+    window.visualViewport.addEventListener("scroll", onViewportChange, { passive: true });
+  }
+
+  document.addEventListener("focusout", () => {
+    setTimeout(() => {
+      const ae = document.activeElement;
+      const stillTyping = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA") && !ae.readOnly && !ae.disabled;
+      if (!stillTyping) document.body.classList.remove("keyboard-open");
+    }, 300);
+  });
+})();
+</script>
 </body>
 </html>

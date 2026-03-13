@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel, field_serializer
 from datetime import datetime
 from typing import List
@@ -14,6 +15,7 @@ class Daily(BaseModel):
     protein: float
     fat: float
     calories: float
+    calorie_type: Literal["deficit", "surplus"]
     tdee_multiplier: float
 
 
@@ -32,6 +34,7 @@ class Settings(BaseModel):
     daily: Daily
     person: Person
     start_date: datetime
+    timezone_name: str
 
     @field_serializer("start_date")
     def serialize_start(self, value: datetime):

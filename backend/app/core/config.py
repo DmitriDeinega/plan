@@ -2,8 +2,6 @@ from dataclasses import dataclass
 import os
 from dotenv import load_dotenv
 
-DATE_FORMAT = "%d%m%Y"
-
 
 @dataclass(frozen=True)
 class AppConfig:

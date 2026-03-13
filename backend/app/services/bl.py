@@ -3,16 +3,17 @@ from __future__ import annotations
 import logging
 from pymongo import ASCENDING
 
-from app.core.date_utils import parse_date, format_date
-from app.core.enums import Collection
-from app.core.utils import (
-    choice_times,
+from app.core.date_utils import (
+    parse_date,
+    format_date,
     next_day,
     prev_day,
     today,
     tomorrow,
     yesterday,
 )
+from app.core.enums import Collection
+from app.core.utils import choice_times
 from app.db.dal import DAL
 
 
@@ -58,8 +59,10 @@ class BL:
         key = date_key(date)
         day = self.get_day_dal(key)
 
-        dt = parse_date(date).date()
-        if day is None and dt == today().date():
+        dt = parse_date(date)
+        timezone_name = self.get_timezone_name()
+
+        if day is None and dt == today(timezone_name):
             self.logger.info("Auto end previous day because today requested and day missing date=%s", date)
             self.end_day_dal(format_date(prev_day(parse_date(date))))
             day = self.get_day_dal(key)
@@ -93,7 +96,9 @@ class BL:
         if actual_open_date != open_day_date:
             raise Exception("Day is not open")
 
-        if actual_open_date != format_date(tomorrow()):
+        timezone_name = self.get_timezone_name()
+
+        if actual_open_date != format_date(tomorrow(timezone_name)):
             raise Exception("Revert allowed only when open day is tomorrow")
 
         prev_date = format_date(prev_day(parse_date(actual_open_date)))
@@ -127,7 +132,9 @@ class BL:
 
     def end_day(self, date: str):
         self.logger.info("End day requested date=%s", date)
-        if date == format_date(tomorrow()):
+
+        timezone_name = self.get_timezone_name()
+        if date == format_date(tomorrow(timezone_name)):
             raise Exception("Cannot End Tomorrow")
         self.end_day_dal(date)
 
@@ -136,7 +143,8 @@ class BL:
         if open_day is None:
             return None
 
-        yesterday_day = format_date(yesterday())
+        timezone_name = self.get_timezone_name()
+        yesterday_day = format_date(yesterday(timezone_name))
         if yesterday_day == open_day.get("date"):
             self.logger.info("Auto end open day because it equals yesterday date=%s", yesterday_day)
             self.end_day_dal(yesterday_day)
@@ -286,6 +294,15 @@ class BL:
         )
 
         self.logger.info("End day done date=%s tomorrow_created=%s", date, tomorrow_date)
+
+    def get_timezone_name(self):
+        settings = self.dal.find_one(
+            collection=Collection.SETTINGS.value,
+            key={},
+            columns={"timezone_name": 1}
+        )
+
+        return settings["timezone_name"]
 
     def validate_day_update(self, day_key):
         columns = {"day_closed": 1}
