@@ -1,8 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background:#0B1220">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#0B1220">
+  <meta name="background-color" content="#0B1220">
 
   <title>Plan <!--ENV_SUFFIX--></title>
 
@@ -35,7 +37,7 @@
 
 	  --nav-btn-h: 44px;
 	  --nav-pad-top: 6px;
-	  --nav-pad-bottom: max(6px, var(--safe-bottom));
+	  --nav-pad-bottom: max(8px, var(--safe-bottom));
 	  --nav-total-h: calc(var(--nav-btn-h) + var(--nav-pad-top) + var(--nav-pad-bottom));
 
 	  --ok-border: rgba(46,242,168,0.78);
@@ -1550,7 +1552,7 @@
                         <div class="bubble" id="weightBubble">
                           <div class="weightTitle"><div class="t1">Weight</div></div>
                           <div class="weightInputWrap">
-                            <input class="weightInput" id="weightInput" inputmode="decimal" placeholder="" />
+                            <input class="weightInput" id="weightInput" inputmode="decimal" placeholder="" type="search"/>
                             <div class="weightUnit">kg</div>
                           </div>
                         </div>
@@ -2143,8 +2145,11 @@
       // the cursor already hovering over an item from overriding index 0)
       ac.ignoreMouseEnter = true;
 
-      // Position BEFORE making visible so there's no jump
-      acRepositionForInput(input);
+      // Position BEFORE making visible so there's no jump.
+      // Only decide above/below on the first open (or when switching inputs);
+      // subsequent calls while already open just reposition without re-locking direction.
+      const alreadyOpen = ac.menu.classList.contains("open") && !switchingInput;
+      acRepositionForInput(input, alreadyOpen);
       ac.menu.classList.add("open");
       ac.list.scrollTop = 0; // reset after display:flex so it takes effect
       // Re-position after scroll settles (keyboard/auto-scroll may shift the input)
@@ -2153,7 +2158,7 @@
       ac.list.addEventListener("mousemove", () => { ac.ignoreMouseEnter = false; }, { once: true });
     }
 
-    function acRepositionForInput(input){
+    function acRepositionForInput(input, keepDirection){
       if (!ac.menu || !input) return;
       const r = input.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) return;
@@ -2163,18 +2168,29 @@
       let left = Math.max(8, r.left);
       if (left + menuW > vw - 8) left = Math.max(8, vw - 8 - menuW);
       const maxH = parseInt(getComputedStyle(ac.menu).maxHeight) || 320;
-      // list.scrollHeight is 0 while hidden — use maxH so up/down is correct
-      const menuH = maxH;
+      // Estimate real menu height from item count rather than always using maxH.
+      // This prevents the full-size flash when only 1–2 items are present.
+      // Each item is roughly 36px (desktop) / 31px (mobile ≤737px) / 25px (≤508px).
+      const itemH = vw <= 508 ? 25 : vw <= 737 ? 31 : 36;
+      const itemCount = Math.max(1, ac.items ? ac.items.length : 1);
+      const estimatedContentH = itemCount * itemH + 8; // +8 for list padding
+      const menuH = Math.min(maxH, estimatedContentH);
       const spaceBelow = vh - r.bottom - 12;
       const spaceAbove = r.top - 12;
-      let top;
-      if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
-        top = r.bottom + 6;
+      // Only re-decide direction on fresh open; while typing, hold the locked direction.
+      if (!keepDirection) {
+        ac.openBelow = spaceBelow >= menuH || spaceBelow >= spaceAbove;
+      }
+      if (ac.openBelow) {
+        ac.menu.style.top = (r.bottom + 6) + "px";
+        ac.menu.style.bottom = "";
       } else {
-        top = Math.max(8, r.top - menuH - 6);
+        // Pin the bottom edge of the dropdown flush above the input.
+        // This way the dropdown grows/shrinks upward — no positional bump while typing.
+        ac.menu.style.bottom = (window.innerHeight - r.top + 6) + "px";
+        ac.menu.style.top = "";
       }
       ac.menu.style.left = left + "px";
-      ac.menu.style.top = top + "px";
       ac.menu.style.width = menuW + "px";
     }
 
@@ -2191,21 +2207,21 @@
       let left = Math.max(8, r.left);
       if (left + menuW > vw - 8) left = Math.max(8, vw - 8 - menuW);
 
-      const maxH = parseInt(getComputedStyle(ac.menu).maxHeight) || 320;
-      const menuH = Math.min(maxH, ac.list.scrollHeight + 8);
-
+      // Use the direction locked when the menu first opened (ac.openBelow).
+      // Re-evaluate only when the input is genuinely pushed to an edge by scroll.
       const spaceBelow = vh - r.bottom - 12;
       const spaceAbove = r.top - 12;
+      if (ac.openBelow && spaceBelow < 30 && spaceAbove > spaceBelow) ac.openBelow = false;
+      if (!ac.openBelow && spaceAbove < 30 && spaceBelow > spaceAbove) ac.openBelow = true;
 
-      let top;
-      if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
-        top = r.bottom + 6;
+      if (ac.openBelow) {
+        ac.menu.style.top = (r.bottom + 6) + "px";
+        ac.menu.style.bottom = "";
       } else {
-        top = Math.max(8, r.top - menuH - 6);
+        ac.menu.style.bottom = (window.innerHeight - r.top + 6) + "px";
+        ac.menu.style.top = "";
       }
-
       ac.menu.style.left = left + "px";
-      ac.menu.style.top = top + "px";
       ac.menu.style.width = menuW + "px";
       requestAnimationFrame(() => acSbSync());
     }
@@ -2218,6 +2234,8 @@
       ac.items = [];
       ac.activeIndex = -1;
       ac.lastRenderKey = "";
+      ac.openBelow = true;
+      ac.menu.style.bottom = "";
     }
 
     function acSbSync(){
