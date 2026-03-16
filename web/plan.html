@@ -332,13 +332,23 @@
       border:1px solid rgba(255,255,255,0.14);
       background: rgba(255,255,255,0.06);
       color: rgba(255,255,255,0.92);
-      padding: 0 8px;
+      padding: 0 4px;
       outline:none;
       font: inherit;
       font-weight: 950;
-      font-size: 13px;
+      font-size: 12px;
       text-align:center;
       font-variant-numeric: tabular-nums;
+      /* suppress the native ✕ button that type=search adds in Chrome */
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .weightInput::-webkit-search-cancel-button,
+    .weightInput::-webkit-search-decoration,
+    .weightInput::-webkit-search-results-button,
+    .weightInput::-webkit-search-results-decoration {
+      display: none;
+      -webkit-appearance: none;
     }
     .weightUnit{ color: rgba(255,255,255,0.68); font-weight: 800; user-select:none; white-space:nowrap; font-size: 13px; }
 
