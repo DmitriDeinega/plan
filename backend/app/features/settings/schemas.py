@@ -7,7 +7,6 @@ from app.core.date_utils import format_date
 
 class Group(BaseModel):
     name: str
-    calories: int
     new_day_amount: int
 
 
