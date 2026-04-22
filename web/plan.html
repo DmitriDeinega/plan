@@ -2669,9 +2669,17 @@
         const nonEmpty = all.filter(tr => !isMealRowEmpty(tr));
         const emptyRows = all.filter(tr => isMealRowEmpty(tr));
 
-        // Remove all empty rows except keep at most one at the end
-        // Never remove the row that currently has focus
-        emptyRows.forEach(tr => { if (tr.isConnected && tr !== focusedRow) tr.remove(); });
+        // Keep at most one trailing empty row.
+        // Only protect the focused row from removal if it's the sole empty row
+        // (meaning it IS the trailing empty). If there are multiple empty rows,
+        // the last one becomes the trailing empty and the rest are removed, even if focused.
+        const trailingEmpty = emptyRows.length > 0 ? emptyRows[emptyRows.length - 1] : null;
+        emptyRows.forEach(tr => {
+          if (!tr.isConnected) return;
+          if (tr === trailingEmpty) return; // always keep the last empty as trailing
+          if (tr === focusedRow && emptyRows.length === 1) return; // sole empty + focused = trailing
+          tr.remove();
+        });
 
         // Re-read after removal
         const remaining = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
