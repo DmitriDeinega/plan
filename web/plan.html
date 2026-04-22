@@ -2646,7 +2646,8 @@
       const p = $("td:nth-child(3) input", tr).value.trim();
       const f = $("td:nth-child(4) input", tr).value.trim();
       const c = $("td:nth-child(5) input", tr).value.trim();
-      return !name && !weight && !p && !f && !c;
+      const weightEmpty = !weight || weight === "0" || weight === "0.0" || weight === "0.00";
+      return !name && weightEmpty && !p && !f && !c;
     }
 
     // Compact: remove ALL interior empty rows (gap-fill), keep exactly one trailing empty.
@@ -3228,7 +3229,7 @@
               if (wInput.value === "0" || wInput.value === "0.0" || wInput.value === "0.00") wInput.value = "";
             });
             wInput.addEventListener("input", updateRowNutrition);
-            wInput.addEventListener("search", updateRowNutrition);
+            wInput.addEventListener("search", () => setTimeout(updateRowNutrition, 0));
             wInput.addEventListener("blur", () => {
               if (wInput.value === "") wInput.value = "0";
               updateRowNutrition();
