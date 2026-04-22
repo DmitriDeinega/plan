@@ -2187,9 +2187,12 @@
       const menuH = Math.min(maxH, estimatedContentH);
       const spaceBelow = vh - r.bottom - 12;
       const spaceAbove = r.top - 12;
-      // Only re-decide direction on fresh open; while typing, hold the locked direction.
-      if (!keepDirection) {
-        ac.openBelow = spaceBelow >= menuH || spaceBelow >= spaceAbove;
+      // Re-decide direction on fresh open, or when the menu height changed enough
+      // that the original decision would now be different (e.g. user deleted text,
+      // fewer results fit below, or more space became available above).
+      const wouldOpenBelow = spaceBelow >= menuH || spaceBelow >= spaceAbove;
+      if (!keepDirection || wouldOpenBelow !== ac.openBelow) {
+        ac.openBelow = wouldOpenBelow;
       }
       if (ac.openBelow) {
         ac.menu.style.top = (r.bottom + 6) + "px";
@@ -2333,8 +2336,8 @@
           e.preventDefault();
           acHide();
         } else if (e.key === "Tab"){
-          // On tab, pick current active item before moving focus
-          if (ac.activeIndex >= 0){
+          // Only pick on tab if the input has a value; if it's empty let focus move naturally
+          if (ac.activeIndex >= 0 && (input.value || "").trim()){
             acPick(ac.activeIndex);
           } else {
             acHide();
@@ -2672,9 +2675,12 @@
         // Re-read after removal
         const remaining = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
 
-        // If we removed the only trailing empty, add one back (unless at max capacity)
+        // If we removed the only trailing empty, add one back (unless at max capacity).
+        // A focused empty row counts as the trailing empty even if it's not at the end —
+        // it will be moved/removed once focus leaves, so don't add a second empty row.
         const hasTrailing = remaining.length > 0 && isMealRowEmpty(remaining[remaining.length - 1]);
-        if (!hasTrailing && nonEmpty.length < 5){
+        const hasFocusedEmpty = focusedRow && focusedRow.isConnected && isMealRowEmpty(focusedRow);
+        if (!hasTrailing && !hasFocusedEmpty && nonEmpty.length < 5){
           const newTr = buildRowFn();
           if (sumRow && sumRow.isConnected) tbody.insertBefore(newTr, sumRow);
           else tbody.appendChild(newTr);
@@ -2763,12 +2769,10 @@
       const mealName = groupMealNameFromUpper(groupUpper);
       const sums = sumMeal(mealName);
       const hasAny = sums.hasAny;
-      const defaultCalories = Number(groups[groupUpper] || 0);
-
       return {
         protein: round2(sums.protein),
         fat: round2(sums.fat),
-        calories: round2(hasAny ? sums.calories : defaultCalories),
+        calories: round2(sums.calories),
         hasAny
       };
     }
@@ -3182,6 +3186,7 @@
 
             if (!name){
               pInput.value = ""; fInput.value = ""; cInput.value = "";
+              if (mealNameUpper in groups) updateGroupMealTotals(mealNameUpper);
               sumMeal(meal.name);
               computeAllTotals();
               ensureTrailingAndMax5();
@@ -3190,6 +3195,7 @@
 
             if (!(up in foodsMap)){
               pInput.value = ""; fInput.value = ""; cInput.value = "";
+              if (mealNameUpper in groups) updateGroupMealTotals(mealNameUpper);
               sumMeal(meal.name);
               computeAllTotals();
               ensureTrailingAndMax5();
@@ -3216,9 +3222,17 @@
           if (!locked){
             nameInput.addEventListener("input", updateRowNutrition);
             nameInput.addEventListener("change", updateRowNutrition);
+            nameInput.addEventListener("search", () => setTimeout(updateRowNutrition, 0));
             nameInput.addEventListener("blur", updateRowNutrition);
+            wInput.addEventListener("focus", () => {
+              if (wInput.value === "0" || wInput.value === "0.0" || wInput.value === "0.00") wInput.value = "";
+            });
             wInput.addEventListener("input", updateRowNutrition);
-            wInput.addEventListener("blur", updateRowNutrition);
+            wInput.addEventListener("search", updateRowNutrition);
+            wInput.addEventListener("blur", () => {
+              if (wInput.value === "") wInput.value = "0";
+              updateRowNutrition();
+            });
           }
 
           return tr;
@@ -3306,7 +3320,13 @@
 
               const draftRender = JSON.parse(JSON.stringify(draftBefore));
               (draftRender.meals || []).forEach(m => {
-                m.meal_closed = !!mealClosedState[m.name];
+                const upM = String(m.name || "").toUpperCase();
+                if (!(upM in groups)) m.meal_closed = !!mealClosedState[m.name];
+              });
+              const derivedForRender = computeDerivedLockedGroups(draftRender);
+              (draftRender.meals || []).forEach(m => {
+                const upM = String(m.name || "").toUpperCase();
+                if (upM in groups) m.meal_closed = derivedForRender.has(upM);
               });
 
               // Animate the card before re-rendering so the collapse looks smooth
@@ -3722,7 +3742,7 @@
           chartDaily = new Chart($("#chartDaily"), {
             type: "line",
             data: { labels: dailyLabels, datasets: [{ label:"Weight", data: dailyData, pointRadius:3, tension:0.25 }] },
-            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } }, x:{ ticks:{ maxRotation: 90, minRotation: 45, autoSkip: false, font:{ size: 9 } } } } }
+            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } }, x:{ ticks:{ display: false } } } }
           });
         } else {
           chartDaily.data.labels = dailyLabels;
@@ -3734,7 +3754,7 @@
           chartWeeklyAvg = new Chart($("#chartWeeklyAvg"), {
             type: "line",
             data: { labels: weeklyAvgLabels, datasets: [{ label:"Weekly Average", data: weeklyAvgData, pointRadius:3, tension:0.25 }] },
-            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } } } }
+            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Weight" } }, x:{ ticks:{ display: false } } } }
           });
         } else {
           chartWeeklyAvg.data.labels = weeklyAvgLabels;
@@ -3746,7 +3766,7 @@
           chartWeeklyRed = new Chart($("#chartWeeklyReduction"), {
             type: "bar",
             data: { labels: weeklyRedLabels, datasets: [{ label:"Weekly Reduction", data: weeklyRedData }] },
-            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Reduction" } } } }
+            options: { responsive:true, scales:{ y:{ title:{ display:true, text:"Reduction" } }, x:{ ticks:{ display: false } } } }
           });
         } else {
           chartWeeklyRed.data.labels = weeklyRedLabels;
