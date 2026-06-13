@@ -16,29 +16,6 @@ def _upper(s: str) -> str:
     return (s or "").strip().upper()
 
 
-def _normalize_food(food: dict) -> dict:
-    name = (food.get("name") or "").strip()
-    w = food.get("weight", None)
-    if w == "":
-        w = None
-    return {
-        "name": name,
-        "weight": w,
-        "protein": float(food.get("protein", 0) or 0),
-        "fat": float(food.get("fat", 0) or 0),
-        "calories": float(food.get("calories", 0) or 0),
-    }
-
-
-def _normalize_meal(meal: dict) -> dict:
-    foods = meal.get("foods") or []
-    return {
-        "name": (meal.get("name") or "").strip(),
-        "meal_closed": bool(meal.get("meal_closed") or False),
-        "foods": [_normalize_food(f) for f in foods],
-    }
-
-
 def _meals_map(meals: list[dict]) -> dict[str, dict]:
     m: dict[str, dict] = {}
     for meal in meals or []:

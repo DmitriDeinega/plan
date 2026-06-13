@@ -151,13 +151,6 @@ class BL:
 
         return self.get_day_dal({"day_closed": False})
 
-    def get_history(self):
-        return self.dal.find_all(
-            collection=Collection.DAYS.value,
-            key={},
-            columns={"_id": 0},
-        )
-
     def get_weights(self):
         return self.dal.find_all(
             collection=Collection.DAYS.value,

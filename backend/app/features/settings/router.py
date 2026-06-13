@@ -19,14 +19,7 @@ class ApiResponse(BaseModel):
 def get_settings(request: Request):
     try:
         settings = request.app.state.bl.get_settings()
-        return {
-            "settings": settings,
-            "status": Status.SUCCESS,
-            "errorMessage": ""
-        }
+        return ApiResponse(settings=settings)
     except Exception as e:
         request.app.state.logger.exception("GET /settings failed")
-        return {
-            "status": Status.ERROR,
-            "errorMessage": str(e)
-        }
+        return ApiResponse(status=Status.ERROR, errorMessage=str(e))

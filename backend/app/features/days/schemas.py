@@ -7,10 +7,17 @@ from app.core.date_utils import parse_date
 
 class FoodMeal(BaseModel):
     name: str
-    protein: float
-    fat: float
-    calories: float
+    protein: float = 0
+    fat: float = 0
+    calories: float = 0
     weight: Optional[float] = None
+
+    @field_validator("protein", "fat", "calories", mode="before")
+    @classmethod
+    def normalize_nutrient(cls, v):
+        if v == "" or v is None:
+            return 0
+        return v
 
     @field_validator("weight", mode="before")
     @classmethod
@@ -33,7 +40,7 @@ class DayUpdateIn(BaseModel):
 
 class DayOut(BaseModel):
     date: Optional[str] = None
-    weight: float
+    weight: Optional[float] = None
     meals: List[Meal]
     day_closed: Optional[bool] = None
 

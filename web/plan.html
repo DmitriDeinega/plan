@@ -771,11 +771,6 @@
       white-space: nowrap;
     }
     .dayActBtn:active{ transform: scale(0.98); }
-    .dayActBtn--sec{
-      background: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.80);
-      border: 1px solid rgba(255,255,255,0.14);
-    }
     .dayActDivider{
       height: 1px;
       background: rgba(255,255,255,0.10);
@@ -932,16 +927,6 @@
         transform-origin: left;
         transition: transform 0.2s ease, opacity 0.3s ease;
         opacity: 0;
-      }
-      #ptrIndicator.pulling{ opacity:1; }
-      #ptrIndicator.refreshing{
-        opacity:1;
-        transform: scaleX(1);
-        animation: ptrSweep 0.8s linear infinite;
-      }
-      @keyframes ptrSweep{
-        0%  { background-position: -100% 0; }
-        100%{ background-position: 200% 0; }
       }
 
       /* --- Topbar: smaller brand text --- */
@@ -1233,6 +1218,9 @@
 	  height: 100%;
 	  font-size: 12px;
 	}
+
+      /* hides flatpickr year arrows at min/max bound (toggled in syncYearArrows) */
+      .fp-hide{ visibility: hidden !important; }
 
       /* --- Card headers --- */
       .cardHeader{ padding: 10px 12px 8px; }
@@ -1969,6 +1957,14 @@
         if (chartDaily) chartDaily.resize();
         if (chartWeeklyAvg) chartWeeklyAvg.resize();
         if (chartWeeklyRed) chartWeeklyRed.resize();
+        // clear any stale inline mobile styles on nutrient cells when back on desktop
+        if (window.innerWidth > 640){
+          $$("#viewDay .mealBodyDay tbody tr td, #viewDay .mealBodyFoods tbody tr td").forEach(td => {
+            td.style.display = "";
+            td.style.alignItems = "";
+            td.style.gap = "";
+          });
+        }
       });
     }
 
@@ -2568,8 +2564,6 @@
         _stuckThreshold = null; // re-measure now panel is visible
         enableStickyObserver();
         syncStickyNowNoAnim();
-      } else {
-        disableStickyObserver();
       }
 
       if (name === "Weights") loadWeights();
@@ -2613,9 +2607,7 @@
           protein: Number(food.protein),
           fat: Number(food.fat),
           calories: Number(food.calories),
-          type: food.type,
-          innerType: food.inner_type || "",
-          available: food.available || ""
+          type: food.type
         };
         foodsCombo.push(food.name);
 
@@ -2689,18 +2681,10 @@
         // it will be moved/removed once focus leaves, so don't add a second empty row.
         const hasTrailing = remaining.length > 0 && isMealRowEmpty(remaining[remaining.length - 1]);
         const hasFocusedEmpty = focusedRow && focusedRow.isConnected && isMealRowEmpty(focusedRow);
-        if (!hasTrailing && !hasFocusedEmpty && nonEmpty.length < 5){
+        if (!hasTrailing && !hasFocusedEmpty){
           const newTr = buildRowFn();
           if (sumRow && sumRow.isConnected) tbody.insertBefore(newTr, sumRow);
           else tbody.appendChild(newTr);
-        }
-
-        // Enforce max 5 data rows + 1 trailing empty = 6 total
-        const afterAll = $$("tr", tbody).filter(tr => !tr.classList.contains("sumRow"));
-        while (afterAll.length > 6){
-          const last = afterAll.pop();
-          if (last.isConnected && isMealRowEmpty(last)) last.remove();
-          else break;
         }
       });
     }
@@ -2708,11 +2692,6 @@
     function ensureTrailingEmptyRowsForMeal(tbody, buildRowFn){
       // Legacy call sites — delegate to the safe deferred version
       compactAndEnsureTrailing(tbody, buildRowFn);
-    }
-
-    function enforceMax5Rows(tbody){
-      // Now a no-op: compactAndEnsureTrailing handles everything
-      // Kept for call-site compatibility
     }
 
     function mealCardByName(name){
@@ -2828,8 +2807,6 @@
                 return empty;
               }
         );
-
-        enforceMax5Rows(tbody);
       });
     }
 
@@ -3035,7 +3012,6 @@
           toast("err", ve.message || "Validation error");
           return;
         }
-		console.log(payload);
         await apiPatch("days/" + currentDayDdmmyyyy, payload);
         toast("ok", "Saved Successfully");
         snapshotMealCollapse();
@@ -3164,7 +3140,6 @@
           function ensureTrailingAndMax5(){
             if (locked) return;
             ensureTrailingEmptyRowsForMeal(tbody, () => buildRow(null));
-            enforceMax5Rows(tbody);
           }
 
           function updateRowNutrition(){
@@ -3369,7 +3344,6 @@
         sumMeal(meal.name);
         if (!locked) {
           ensureTrailingEmptyRowsForMeal(tbody, () => buildRow(null));
-          enforceMax5Rows(tbody);
         }
       });
 
@@ -3440,7 +3414,7 @@
     }
 
     function buildFoodsEditorUI(foods){
-      const types = ["Protein","Fat","Carb","Extra"];
+      const types = ["Protein","Fat","Carb"];
       const byType = {};
       types.forEach(t => byType[t] = []);
       foods.forEach(x => (byType[x.type] = byType[x.type] || []).push(x));
@@ -3850,8 +3824,6 @@
       scroller.addEventListener("scroll", () => updateStuck(false), { passive: true });
     }
 
-    function disableStickyObserver(){ /* scroll listener persists harmlessly when Day is hidden */ }
-
     function syncStickyNowNoAnim(){ updateStuck(true); }
 
     function wireUI(){
@@ -3925,29 +3897,6 @@
     /* ============================================================
        MOBILE ENHANCEMENTS
        ============================================================ */
-
-    // Patch forceResponsiveReflow to clear any stale inline display styles
-    // on nutrient cells when resizing back to desktop
-    const _origForceReflow = forceResponsiveReflow;
-    window.forceResponsiveReflow = function(){
-      _origForceReflow();
-      if (window.innerWidth > 640){
-        $$("#viewDay .mealBodyDay tbody tr td, #viewDay .mealBodyFoods tbody tr td").forEach(td => {
-          td.style.display = "";
-          td.style.alignItems = "";
-          td.style.gap = "";
-        });
-      }
-    };
-
-    // Also patch the MutationObserver (kept for future use / chart reflow)
-    const _observer = new MutationObserver(() => {
-      // intentionally empty — CSS ::before handles mobile labels
-    });
-    const mealsWrap = $("#mealsWrap");
-    if (mealsWrap){
-      _observer.observe(mealsWrap, { childList: true, subtree: true });
-    }
 
     /* --- Pull-to-refresh ---
        Detects a downward swipe at the top of the scroll container.
