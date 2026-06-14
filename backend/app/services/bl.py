@@ -276,17 +276,30 @@ class BL:
         )
 
         tomorrow_date = format_date(next_day(parse_date(date)))
-        tomorrow_day = date_key(tomorrow_date) | {
-            "meals": tomorrowMeals,
-            "weight": 0,
-            "day_closed": False,
-        }
-        self.dal.insert_one(
+        # Only create the next day if it doesn't already exist. end_day_dal is reached from
+        # three paths (manual End, auto-end in get_open_day, auto-end-prev in get_day); without
+        # this guard any of them running when tomorrow already exists inserts a duplicate-date
+        # document, leaving two "open" days and stranding the client on the wrong day.
+        existing_tomorrow = self.dal.find_one(
             collection=Collection.DAYS.value,
-            document=tomorrow_day,
+            key=date_key(tomorrow_date),
+            columns={"_id": 1},
         )
-
-        self.logger.info("End day done date=%s tomorrow_created=%s", date, tomorrow_date)
+        if existing_tomorrow is None:
+            tomorrow_day = date_key(tomorrow_date) | {
+                "meals": tomorrowMeals,
+                "weight": 0,
+                "day_closed": False,
+            }
+            self.dal.insert_one(
+                collection=Collection.DAYS.value,
+                document=tomorrow_day,
+            )
+            self.logger.info("End day done date=%s tomorrow_created=%s", date, tomorrow_date)
+        else:
+            self.logger.info(
+                "End day done date=%s tomorrow_already_exists=%s", date, tomorrow_date
+            )
 
     def get_timezone_name(self):
         settings = self.dal.find_one(
