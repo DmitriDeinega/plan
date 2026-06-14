@@ -3478,12 +3478,12 @@
         function buildFoodRow(food){
           const tr = document.createElement("tr");
           tr.innerHTML = `
-            <td><input class="cellInput" value="${escapeHtml(food?.name || "")}" /></td>
-            <td class="num"><input class="cellInput" inputmode="decimal" value="${escapeHtml(food?.protein ?? "")}" /></td>
-            <td class="num"><input class="cellInput" inputmode="decimal" value="${escapeHtml(food?.fat ?? "")}" /></td>
-            <td class="num"><input class="cellInput" inputmode="decimal" value="${escapeHtml(food?.calories ?? "")}" /></td>
-            <td><input class="cellInput" value="${escapeHtml(food?.inner_type || "")}" /></td>
-            <td><input class="cellInput" value="${escapeHtml(food?.available || "")}" /></td>
+            <td><input class="cellInput" type="search" value="${escapeHtml(food?.name || "")}" /></td>
+            <td class="num"><input class="cellInput" type="search" inputmode="decimal" value="${escapeHtml(food?.protein ?? "")}" /></td>
+            <td class="num"><input class="cellInput" type="search" inputmode="decimal" value="${escapeHtml(food?.fat ?? "")}" /></td>
+            <td class="num"><input class="cellInput" type="search" inputmode="decimal" value="${escapeHtml(food?.calories ?? "")}" /></td>
+            <td><input class="cellInput" type="search" value="${escapeHtml(food?.inner_type || "")}" /></td>
+            <td><input class="cellInput" type="search" value="${escapeHtml(food?.available || "")}" /></td>
           `;
 
           $$("input", tr).forEach(i => i.addEventListener("input", ensureFoodTrailingEmptyRow));
