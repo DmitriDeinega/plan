@@ -67,7 +67,11 @@ data class Settings(
     val daily: Daily,
     val person: Person,
     val start_date: String,
-    val timezone_name: String
+    val timezone_name: String,
+    // Server-computed dates (ddMMyyyy) in the configured timezone; used for End/Revert logic
+    // instead of the device clock. Nullable for safety if an older backend omits them.
+    val today: String? = null,
+    val tomorrow: String? = null
 )
 
 // Request bodies

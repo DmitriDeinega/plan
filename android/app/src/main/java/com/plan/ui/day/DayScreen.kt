@@ -307,8 +307,10 @@ private fun DayStickyHeader(
             // !dayClosed == active. When the open day is tomorrow (today was just ended),
             // the second button is Revert instead of End. Closed days keep an empty card.
             val isActiveDay = !state.dayClosed
+            // Prefer the server's "tomorrow" (configured timezone); fall back to the device clock.
+            val serverTomorrow = state.settings?.tomorrow?.takeIf { it.isNotEmpty() }
             val openIsTomorrow = state.openDate.isNotEmpty() &&
-                    state.openDate == addDays(todayDdMmYyyy(), 1)
+                    state.openDate == (serverTomorrow ?: addDays(todayDdMmYyyy(), 1))
             DayActions(
                 isActiveDay = isActiveDay,
                 showRevert = isActiveDay && openIsTomorrow,
