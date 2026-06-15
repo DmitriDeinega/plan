@@ -2,7 +2,7 @@ name: plan
 
 services:
   mongo:
-    image: mongo:7.0
+    image: mongo:7
     container_name: plan-mongo
     restart: unless-stopped
     volumes:
