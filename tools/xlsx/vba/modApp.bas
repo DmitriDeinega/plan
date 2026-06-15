@@ -11,6 +11,9 @@ Public Sub InitApp()
 
     ThisWorkbook.Saved = True
     Worksheets("Plan").Activate
+    ' Reset the view to the very top-left on load.
+    ActiveWindow.ScrollRow = 1
+    ActiveWindow.ScrollColumn = 1
 
 CleanUp:
     modError.ReportError "modApp.InitApp"
