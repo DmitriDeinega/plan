@@ -6,16 +6,21 @@
   <meta name="theme-color" content="#0B1220">
   <meta name="background-color" content="#0B1220">
 
+  <!-- Restrict where scripts/styles/connections may come from. 'unsafe-inline' is required
+       because this app is a single inline SPA; external resources are pinned to the known CDNs. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'self'; object-src 'none'">
+
   <title>Plan <!--ENV_SUFFIX--></title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Pinned versions + Subresource Integrity so a tampered CDN asset is rejected. -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
 
   <link rel="icon" href="/static/favicon.ico?v=1">
 
@@ -1799,6 +1804,8 @@
     }
 
     function todayDdmmyyyy(){
+      // Prefer the server's "today" (configured timezone); fall back to the device clock.
+      if (settings && settings.today) return settings.today;
       const d = new Date();
       const dd = String(d.getDate()).padStart(2,"0");
       const mm = String(d.getMonth()+1).padStart(2,"0");
@@ -1807,6 +1814,7 @@
     }
 
     function tomorrowDdmmyyyy(){
+      if (settings && settings.tomorrow) return settings.tomorrow;
       const d = new Date();
       d.setDate(d.getDate() + 1);
       const dd = String(d.getDate()).padStart(2,"0");

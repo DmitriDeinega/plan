@@ -34,6 +34,10 @@ class Settings(BaseModel):
     person: Person
     start_date: datetime
     timezone_name: str
+    # Server-computed "today"/"tomorrow" (ddmmyyyy) in the configured timezone, so clients
+    # decide End/Revert visibility from the server's clock instead of the device's.
+    today: str = ""
+    tomorrow: str = ""
 
     @field_serializer("start_date")
     def serialize_start(self, value: datetime):

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import math
+import sys
 from pymongo import ASCENDING
 
 from app.core.date_utils import (
@@ -20,6 +22,21 @@ from app.db.dal import DAL
 
 def date_key(date: str):
     return {"date": date}
+
+
+def _round2(n: float) -> float:
+    # Mirror the clients' round2: Math.round((n + Number.EPSILON) * 100) / 100 (half-up, n >= 0).
+    return math.floor((n + sys.float_info.epsilon) * 100 + 0.5) / 100
+
+
+def _is_number(w) -> bool:
+    if w is None:
+        return False
+    try:
+        float(w)
+        return True
+    except (TypeError, ValueError):
+        return False
 
 
 class BL:
@@ -50,6 +67,63 @@ class BL:
             )
         except Exception:
             self.logger.exception("Day index creation failed (continuing) — check for duplicate dates / multiple open days")
+
+    def _recompute_meals_nutrition(self, meals: list[dict]) -> None:
+        """Recompute every food's protein/fat/calories from the foods catalog, mirroring the
+        clients' math exactly (per-100g x weight/100, round2). Group-reference rows take the
+        totals of the matching group meal. Mutates `meals` in place. Verified to reproduce the
+        client values to the cent across all stored days."""
+        catalog: dict[str, tuple[float, float, float]] = {}
+        for f in (self.get_foods() or []):
+            try:
+                catalog[(f.get("name") or "").strip().upper()] = (
+                    float(f.get("protein") or 0),
+                    float(f.get("fat") or 0),
+                    float(f.get("calories") or 0),
+                )
+            except (TypeError, ValueError):
+                continue
+
+        settings = self.get_settings() or {}
+        groups_u = {(g.get("name") or "").strip().upper() for g in (settings.get("groups") or [])}
+
+        # Pass 1 — catalog-based foods (group-reference rows handled in pass 3).
+        for meal in meals:
+            for food in (meal.get("foods") or []):
+                nu = (food.get("name") or "").strip().upper()
+                if nu in groups_u:
+                    continue
+                w = food.get("weight")
+                if nu in catalog and _is_number(w):
+                    p100, f100, c100 = catalog[nu]
+                    wv = float(w)
+                    food["protein"] = _round2(p100 * wv / 100.0)
+                    food["fat"] = _round2(f100 * wv / 100.0)
+                    food["calories"] = _round2(c100 * wv / 100.0)
+                else:
+                    food["protein"] = 0
+                    food["fat"] = 0
+                    food["calories"] = 0
+
+        # Pass 2 — group-meal totals (sum of that group meal's now-recomputed foods).
+        group_totals: dict[str, tuple[float, float, float]] = {}
+        for meal in meals:
+            mnu = (meal.get("name") or "").strip().upper()
+            if mnu in groups_u:
+                p = f = c = 0.0
+                for food in (meal.get("foods") or []):
+                    p += float(food.get("protein") or 0)
+                    f += float(food.get("fat") or 0)
+                    c += float(food.get("calories") or 0)
+                group_totals[mnu] = (_round2(p), _round2(f), _round2(c))
+
+        # Pass 3 — group-reference rows inherit the matching group meal's totals.
+        for meal in meals:
+            for food in (meal.get("foods") or []):
+                nu = (food.get("name") or "").strip().upper()
+                if nu in groups_u:
+                    gt = group_totals.get(nu, (0, 0, 0))
+                    food["protein"], food["fat"], food["calories"] = gt
 
     # Public API used by routers
 
@@ -95,6 +169,13 @@ class BL:
     def set_day(self, date: str, day_doc: dict):
         key = date_key(date)
         self.validate_day_update(key)
+
+        # Server-authoritative nutrition: recompute each food's macros from the catalog so the
+        # stored numbers never depend on the client. Only ever applied here (the save path),
+        # which set_day's validate_day_update guarantees is an OPEN day — closed/historical days
+        # are never re-saved, so this never rewrites past logs with a since-edited catalog.
+        if isinstance(day_doc.get("meals"), list):
+            self._recompute_meals_nutrition(day_doc["meals"])
 
         self.logger.info("Set day date=%s", date)
         update = {"$set": day_doc}
