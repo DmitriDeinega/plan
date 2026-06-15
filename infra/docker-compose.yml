@@ -2,11 +2,17 @@ name: plan
 
 services:
   mongo:
-    image: mongo:7
+    image: mongo:7.0
     container_name: plan-mongo
     restart: unless-stopped
     volumes:
       - plan_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   backend:
     build:
@@ -15,9 +21,12 @@ services:
     container_name: plan-backend
     restart: unless-stopped
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
+    # Bind to localhost only: the host's Caddy reverse proxy reaches 127.0.0.1:2100,
+    # so the port must NOT be exposed to the LAN / public interface.
     ports:
-      - "2100:2100"
+      - "127.0.0.1:2100:2100"
     env_file:
       - ../backend/app/.env
     environment:

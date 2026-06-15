@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.core.enums import Status
+from app.core.errors import safe_error_message
 from app.features.settings.schemas import Settings
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -22,4 +23,4 @@ def get_settings(request: Request):
         return ApiResponse(settings=settings)
     except Exception as e:
         request.app.state.logger.exception("GET /settings failed")
-        return ApiResponse(status=Status.ERROR, errorMessage=str(e))
+        return ApiResponse(status=Status.ERROR, errorMessage=safe_error_message(e))

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from app.api.schemas.response import BaseResponse
 from app.core.enums import Status
+from app.core.errors import safe_error_message
 
 router = APIRouter(prefix="/foods", tags=["foods"])
 
@@ -23,7 +24,7 @@ def get_foods(request: Request):
         return ApiResponse(foods=foods)
     except Exception as e:
         request.app.state.logger.exception("GET /foods failed")
-        return ApiResponse(status=Status.ERROR, errorMessage=str(e))
+        return ApiResponse(status=Status.ERROR, errorMessage=safe_error_message(e))
 
 
 @router.put("", response_model=BaseResponse)
@@ -34,4 +35,4 @@ def replace_foods(request: Request, payload: FoodsReplaceIn):
         return BaseResponse()
     except Exception as e:
         request.app.state.logger.exception("PUT /foods failed")
-        return BaseResponse(status=Status.ERROR, errorMessage=str(e))
+        return BaseResponse(status=Status.ERROR, errorMessage=safe_error_message(e))

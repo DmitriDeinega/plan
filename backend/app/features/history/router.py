@@ -3,6 +3,7 @@ from typing import Optional
 
 from app.api.schemas.response import BaseResponse
 from app.core.enums import Status
+from app.core.errors import safe_error_message
 
 router = APIRouter(prefix="", tags=["history"])
 
@@ -18,4 +19,4 @@ def weights(request: Request):
         return ApiResponse(days=days)
     except Exception as e:
         request.app.state.logger.exception("GET /weights failed")
-        return ApiResponse(status=Status.ERROR, errorMessage=str(e))
+        return ApiResponse(status=Status.ERROR, errorMessage=safe_error_message(e))

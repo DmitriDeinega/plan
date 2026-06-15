@@ -3,6 +3,7 @@ import logging
 
 from app.api.schemas.response import BaseResponse
 from app.core.enums import Status
+from app.core.errors import BusinessError, safe_error_message
 from app.features.days.schemas import ApiResponse, DayUpdateIn, validate_date_str
 
 router = APIRouter(prefix="/days", tags=["days"])
@@ -32,7 +33,7 @@ def get_open_day(request: Request):
         return ApiResponse(day=day)
     except Exception as e:
         _log(request).exception("GET /days/open failed")
-        return ApiResponse(status=Status.ERROR, errorMessage=str(e))
+        return ApiResponse(status=Status.ERROR, errorMessage=safe_error_message(e))
 
 
 @router.get("/{date}", response_model=ApiResponse)
@@ -43,7 +44,7 @@ def get_day(request: Request, date: str):
         return ApiResponse(day=day)
     except Exception as e:
         _log(request).exception("GET /days/%s failed", date)
-        return ApiResponse(status=Status.ERROR, errorMessage=str(e))
+        return ApiResponse(status=Status.ERROR, errorMessage=safe_error_message(e))
 
 
 @router.patch("/{date}", response_model=BaseResponse)
@@ -55,14 +56,14 @@ def patch_day(request: Request, date: str, payload: DayUpdateIn):
         bl = request.app.state.bl
         existing = bl.get_day(date)
         if existing is None:
-            raise Exception("Day not found")
+            raise BusinessError("Day not found")
 
         if bool(existing.get("day_closed") or False) is True:
-            raise Exception("Day is closed")
+            raise BusinessError("Day is closed")
 
         groups_doc = bl.get_settings()
         if groups_doc is None:
-            raise Exception("Settings missing in DB")
+            raise BusinessError("Settings missing in DB")
 
         groups_upper = {_upper(g.get("name")) for g in (groups_doc.get("groups") or []) if g.get("name")}
         incoming = [m.model_dump() for m in (payload.meals or [])]
@@ -91,9 +92,9 @@ def patch_day(request: Request, date: str, payload: DayUpdateIn):
             incoming_closed = bool(group_meal.get("meal_closed") or False) if group_meal else False
             if incoming_closed != should_be_closed:
                 if incoming_closed and not should_be_closed:
-                    raise Exception(f"Group meal {(group_meal.get('name') if group_meal else g_u)} cannot be signed directly")
+                    raise BusinessError(f"Group meal {(group_meal.get('name') if group_meal else g_u)} cannot be signed directly")
                 else:
-                    raise Exception(f"Group meal {g_u} must be signed because it appears in a signed meal")
+                    raise BusinessError(f"Group meal {g_u} must be signed because it appears in a signed meal")
 
         new_day = dict(existing)
         new_day["weight"] = payload.weight
@@ -104,7 +105,7 @@ def patch_day(request: Request, date: str, payload: DayUpdateIn):
 
     except Exception as e:
         _log(request).exception("PATCH /days/%s failed", date)
-        return BaseResponse(status=Status.ERROR, errorMessage=str(e))
+        return BaseResponse(status=Status.ERROR, errorMessage=safe_error_message(e))
 
 
 @router.post("/{date}/end", response_model=BaseResponse)
@@ -116,7 +117,7 @@ def end_day(request: Request, date: str):
         return BaseResponse()
     except Exception as e:
         _log(request).exception("POST /days/%s/end failed", date)
-        return BaseResponse(status=Status.ERROR, errorMessage=str(e))
+        return BaseResponse(status=Status.ERROR, errorMessage=safe_error_message(e))
 
 
 @router.post("/{date}/revert", response_model=BaseResponse)
@@ -128,4 +129,4 @@ def revert_day(request: Request, date: str):
         return BaseResponse()
     except Exception as e:
         _log(request).exception("POST /days/%s/revert failed", date)
-        return BaseResponse(status=Status.ERROR, errorMessage=str(e))
+        return BaseResponse(status=Status.ERROR, errorMessage=safe_error_message(e))

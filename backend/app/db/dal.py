@@ -29,3 +29,12 @@ class DAL:
 
     def delete_one(self, collection, key):
         return self.db[collection].delete_one(key)
+
+    def drop_collection(self, collection):
+        self.db[collection].drop()
+
+    def rename_collection(self, src, dest, drop_target=False):
+        self.db[src].rename(dest, dropTarget=drop_target)
+
+    def create_index(self, collection, keys, **kwargs):
+        return self.db[collection].create_index(keys, **kwargs)

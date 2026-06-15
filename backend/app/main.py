@@ -32,10 +32,16 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIdMiddleware)
 
+    # The web is served same-origin by this app and the Android client is native (no CORS),
+    # so we only need to allow the known origins — not "*". No credentials are used.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=[
+            "https://plan.63-181-3-204.sslip.io",
+            "http://localhost:2100",
+            "http://127.0.0.1:2100",
+        ],
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

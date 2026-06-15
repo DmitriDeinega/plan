@@ -13,6 +13,7 @@ from app.core.date_utils import (
     yesterday,
 )
 from app.core.enums import Collection
+from app.core.errors import BusinessError
 from app.core.utils import choice_times
 from app.db.dal import DAL
 
@@ -30,7 +31,25 @@ class BL:
     ):
         self.logger = logger
         self.dal = DAL(mongo_uri, mongo_db)
+        self._ensure_indexes()
         self.logger.info("BL initialized mongo_db=%s", mongo_db)
+
+    def _ensure_indexes(self):
+        # Enforce the data invariants at the DB level: unique date, and at most one open day.
+        # Guarded so a (already-clean) prod can't be crashed by index creation; if existing
+        # data ever violated these it would be logged instead of taking the app down.
+        try:
+            self.dal.create_index(
+                Collection.DAYS.value, [("date", ASCENDING)],
+                unique=True, name="uniq_date",
+            )
+            self.dal.create_index(
+                Collection.DAYS.value, [("day_closed", ASCENDING)],
+                unique=True, name="uniq_open_day",
+                partialFilterExpression={"day_closed": False},
+            )
+        except Exception:
+            self.logger.exception("Day index creation failed (continuing) — check for duplicate dates / multiple open days")
 
     # Public API used by routers
 
@@ -48,12 +67,16 @@ class BL:
         )
 
     def set_foods(self, foods: list[dict]):
-        self.logger.info("Replace foods count=%s", len(foods or []))
-        self.dal.remove_all(collection=Collection.FOODS.value)
-        self.dal.insert_many(
-            collection=Collection.FOODS.value,
-            documents=foods,
-        )
+        # Refuse to wipe the catalog, and never leave it half-replaced: build the new set in a
+        # temp collection and atomically rename it over `foods` (renameCollection w/ dropTarget).
+        # If validation/insert fails, the live `foods` collection is untouched.
+        if not foods:
+            raise BusinessError("Refusing to replace foods with an empty list")
+        self.logger.info("Replace foods count=%s", len(foods))
+        swap = Collection.FOODS.value + "_swap"
+        self.dal.drop_collection(swap)
+        self.dal.insert_many(collection=swap, documents=foods)
+        self.dal.rename_collection(swap, Collection.FOODS.value, drop_target=True)
 
     def get_day(self, date: str):
         key = date_key(date)
@@ -87,25 +110,25 @@ class BL:
 
         open_day = self.get_day_dal({"day_closed": False})
         if open_day is None:
-            raise Exception("No open day found")
+            raise BusinessError("No open day found")
 
         actual_open_date = open_day.get("date")
         if not actual_open_date:
-            raise Exception("Open day has no date")
+            raise BusinessError("Open day has no date")
 
         if actual_open_date != open_day_date:
-            raise Exception("Day is not open")
+            raise BusinessError("Day is not open")
 
         timezone_name = self.get_timezone_name()
 
         if actual_open_date != format_date(tomorrow(timezone_name)):
-            raise Exception("Revert allowed only when open day is tomorrow")
+            raise BusinessError("Revert allowed only when open day is tomorrow")
 
         prev_date = format_date(prev_day(parse_date(actual_open_date)))
 
         prev_doc = self.get_day_dal(date_key(prev_date))
         if prev_doc is None:
-            raise Exception("Previous day not found")
+            raise BusinessError("Previous day not found")
 
         self.dal.delete_one(
             collection=Collection.DAYS.value,
@@ -135,7 +158,7 @@ class BL:
 
         timezone_name = self.get_timezone_name()
         if date == format_date(tomorrow(timezone_name)):
-            raise Exception("Cannot End Tomorrow")
+            raise BusinessError("Cannot End Tomorrow")
         self.end_day_dal(date)
 
     def get_open_day(self):
@@ -187,7 +210,7 @@ class BL:
 
         settings = self.get_settings()
         if settings is None:
-            raise Exception("Settings missing in DB")
+            raise BusinessError("Settings missing in DB")
 
         groupsDict: dict[str, int] = {}
         for group in settings["groups"]:
@@ -196,7 +219,7 @@ class BL:
         tomorrowMeals = []
         current_day = self.get_day_dal(key)
         if current_day is None:
-            raise Exception("Day not found")
+            raise BusinessError("Day not found")
 
         proteinSum = 0.0
         fatSum = 0.0
@@ -319,4 +342,4 @@ class BL:
         )
 
         if day is not None and day.get("day_closed") is True:
-            raise Exception("Day Is Closed")
+            raise BusinessError("Day Is Closed")
