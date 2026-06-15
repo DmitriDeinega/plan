@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dev flavor talks to a local HTTP backend, so it needs cleartext. Prod uses HTTPS and
+     intentionally does NOT allow cleartext. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:usesCleartextTraffic="true" />
+</manifest>
