@@ -409,12 +409,8 @@ private fun WeightBubble(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                "Weight",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // No "Weight" label — it crowded the field so decimals like 75.1 were clipped.
+            // The bubble + "kg" suffix already make it clear this is the weight.
             // Inner weight field box (number only).
             Box(
                 modifier = Modifier
