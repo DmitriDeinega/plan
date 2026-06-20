@@ -407,10 +407,15 @@ private fun WeightBubble(
         Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // No "Weight" label — it crowded the field so decimals like 75.1 were clipped.
-            // The bubble + "kg" suffix already make it clear this is the weight.
+            // Smaller label/unit so a decimal weight (e.g. 75.1) still fits the field.
+            Text(
+                "Weight",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             // Inner weight field box (number only).
             Box(
                 modifier = Modifier
@@ -419,7 +424,7 @@ private fun WeightBubble(
                     .padding(vertical = 5.dp)
                     .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(8.dp))
                     .border(1.dp, borderColor, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 6.dp),
+                    .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (enabled) {
@@ -459,7 +464,7 @@ private fun WeightBubble(
                 }
             }
             // "kg" outside the input, to its right.
-            Text("kg", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("kg", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
