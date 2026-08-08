@@ -38,11 +38,53 @@ class DayUpdateIn(BaseModel):
     meals: List[Meal]
 
 
+class NutritionOut(BaseModel):
+    """Day totals, frozen at End Day. Absent on an open day."""
+    protein: float = 0
+    fat: float = 0
+    calories: float = 0
+
+
+class TargetsOut(BaseModel):
+    """The "Needed" figures as computed when the day was closed. Absent on an open day,
+    where clients compute them live from current settings."""
+    protein: float = 0
+    fat_calories: float = 0
+    calories: float = 0
+
+
+class SnapshotDaily(BaseModel):
+    protein: float = 0
+    fat: float = 0
+    calories: float = 0
+    calorie_type: str = ""
+    tdee_multiplier: float = 0
+
+
+class SnapshotPerson(BaseModel):
+    height: float = 0
+    gender: str = ""
+    birth_day: str = ""
+
+
+class SettingsSnapshotOut(BaseModel):
+    """The settings that were in force when the day was closed. Clients use its
+    `calorie_type` so a closed day keeps its original deficit/surplus interpretation
+    (and therefore its colours) even after the live setting changes."""
+    daily: SnapshotDaily = SnapshotDaily()
+    person: SnapshotPerson = SnapshotPerson()
+
+
 class DayOut(BaseModel):
     date: Optional[str] = None
     weight: Optional[float] = None
     meals: List[Meal]
     day_closed: Optional[bool] = None
+    # Previously omitted from this model, so the server's frozen totals were computed, stored,
+    # and then silently dropped on the way out. Clients now render them for closed days.
+    nutrition: Optional[NutritionOut] = None
+    targets: Optional[TargetsOut] = None
+    settings_snapshot: Optional[SettingsSnapshotOut] = None
 
 
 class ApiResponse(BaseResponse):

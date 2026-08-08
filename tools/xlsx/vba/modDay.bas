@@ -310,9 +310,88 @@ Private Sub SetDayValues(ByVal json As Dictionary)
     modPlan.UpdateNavButtons
     modPlan.ApplyAllMealBorders
 
+    ApplyFrozenOrLiveDashboard json
+
 CleanUp:
     modError.ReportError "modDay.SetDayValues"
     Application.EnableEvents = True
+End Sub
+
+' A closed day carries the totals and targets the server froze when the day was ended; show
+' those verbatim. An open day (or an old day saved before snapshots existed) has none, so the
+' live formulas are restored and Excel computes from the current Settings sheet as before.
+'
+' Both the Daily (B5:B7) and Needed (C5:C7) blocks are switched: leaving B5:B7 as row sums
+' would let a later edit to a past day's rows change its recorded totals.
+Private Sub ApplyFrozenOrLiveDashboard(ByVal json As Dictionary)
+    Dim ws As Worksheet
+    Dim day As Dictionary
+    Dim wasProtected As Boolean
+    Dim hasTargets As Boolean, hasNutrition As Boolean
+    Dim snap As Variant, calType As Variant
+
+    On Error GoTo Restore
+
+    Set ws = Worksheets("Plan")
+    Set day = json("day")
+
+    wasProtected = ws.ProtectContents
+    If wasProtected Then ws.Unprotect
+
+    ' Dictionary.Exists guards the key; a JSON null still parses to a present-but-Null item.
+    hasTargets = day.Exists("targets")
+    If hasTargets Then hasTargets = Not IsNull(day("targets"))
+    hasNutrition = day.Exists("nutrition")
+    If hasNutrition Then hasNutrition = Not IsNull(day("nutrition"))
+
+    If hasTargets Then
+        modPlan.WriteNeededValues ws, _
+            CDbl(day("targets")("protein")), _
+            CDbl(day("targets")("fat_calories")), _
+            CDbl(day("targets")("calories"))
+    Else
+        modPlan.WriteNeededFormulas ws
+    End If
+
+    If hasNutrition Then
+        ' Stored fat is GRAMS; the dashboard shows fat calories (x9), rounded like the formula.
+        modPlan.WriteDailyValues ws, _
+            CDbl(day("nutrition")("protein")), _
+            Round(CDbl(day("nutrition")("fat")) * 9, 2), _
+            CDbl(day("nutrition")("calories"))
+    Else
+        modPlan.RestoreDailyFormulas ws
+    End If
+
+    ' Colour the calories "Left" cell against the goal that applied to THIS day.
+    calType = Empty
+    If day.Exists("settings_snapshot") Then
+        If Not IsNull(day("settings_snapshot")) Then
+            Set snap = day("settings_snapshot")
+            If snap.Exists("daily") Then
+                If snap("daily").Exists("calorie_type") Then calType = snap("daily")("calorie_type")
+            End If
+        End If
+    End If
+    If IsEmpty(calType) Or calType = "" Then calType = modSettings.GetSettingsDict("Calorie Type")
+    modPlan.ApplyCalorieLeftColor ws, calType
+
+    ws.Calculate
+
+    If wasProtected Then ws.Protect UserInterfaceOnly:=True
+    Exit Sub
+
+Restore:
+    ' Re-protect even if something above failed, so an error can never leave the sheet open —
+    ' then RERAISE. Swallowing here would leave some B/C cells showing the previous day while
+    ' the rest of the sheet shows the new one, which looks like valid data but isn't.
+    Dim errNum As Long, errDesc As String
+    errNum = Err.Number
+    errDesc = Err.Description
+    If wasProtected Then
+        If Not ws Is Nothing Then ws.Protect UserInterfaceOnly:=True
+    End If
+    Err.Raise errNum, "modDay.ApplyFrozenOrLiveDashboard", errDesc
 End Sub
 
 Public Function GetGroupExistence(ByVal row As Long, ByVal col As Long) As GroupExistence

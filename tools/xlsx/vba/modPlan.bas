@@ -74,6 +74,92 @@ Private Function SRef(ByVal key As String) As String
     SRef = "INDEX(" & DB_SHEET & "!B:B,MATCH(""" & key & """," & DB_SHEET & "!A:A,0))"
 End Function
 
+' --- Dashboard cells B5:B7 (Daily/consumed) and C5:C7 (Needed/target) -------------------
+'
+' A CLOSED day shows what the server froze when the day was ended: the live formulas here
+' read the CURRENT Settings sheet, so leaving them in place would make past days silently
+' change whenever the TDEE multiplier or the daily figures were edited. LoadDay therefore
+' writes VALUES for a day that carries a snapshot and RESTORES these formulas for the open
+' day (or a legacy day with no snapshot).
+
+Public Sub WriteDailyFormulas(ByVal ws As Worksheet, ByVal pCells As String, _
+                              ByVal fCells As String, ByVal cCells As String)
+    ws.Range("B5").Formula = "=ROUND(SUM(" & pCells & "),2)"
+    ws.Range("B6").Formula = "=ROUND(SUM(" & fCells & ")*9,2)"
+    ws.Range("B7").Formula = "=ROUND(SUM(" & cCells & "),2)"
+End Sub
+
+' Rebuilds the meal-column references, so callers that only have the sheet can restore B5:B7.
+Public Sub RestoreDailyFormulas(ByVal ws As Worksheet)
+    Dim cols As Variant: cols = MealCols()
+    Dim pCells As String, fCells As String, cCells As String
+    Dim i As Long, sc As Long
+    For i = 0 To 4   ' regular meals only
+        sc = CLng(cols(i))
+        If i > 0 Then pCells = pCells & ",": fCells = fCells & ",": cCells = cCells & ","
+        pCells = pCells & ColLetter(sc + 2) & FIXED_TOTAL_ROW
+        fCells = fCells & ColLetter(sc + 3) & FIXED_TOTAL_ROW
+        cCells = cCells & ColLetter(sc + 4) & FIXED_TOTAL_ROW
+    Next i
+    WriteDailyFormulas ws, pCells, fCells, cCells
+End Sub
+
+Public Sub WriteDailyValues(ByVal ws As Worksheet, ByVal protein As Double, _
+                            ByVal fatCalories As Double, ByVal calories As Double)
+    ws.Range("B5").Formula = ""
+    ws.Range("B6").Formula = ""
+    ws.Range("B7").Formula = ""
+    ws.Range("B5").Value = protein
+    ws.Range("B6").Value = fatCalories
+    ws.Range("B7").Value = calories
+End Sub
+
+' Needed (target): values fetched by name from the Settings A/B table; weight C2.
+' BMR/TDEE folded inline (not shown anywhere). age computed inline from Birthday vs the shown
+' date (B1); DATE(RIGHT/MID/LEFT) parses the dd/mm/yyyy text locale-independently.
+' Gender is normalised (UPPER/TRIM) and an unrecognised value raises #N/A rather than being
+' silently treated as female, which would shift every target by 166 kcal.
+Public Sub WriteNeededFormulas(ByVal ws As Worksheet)
+    Dim bd As String: bd = SRef("Birthday")
+    Dim ageExpr As String
+    ageExpr = "DATEDIF(DATE(RIGHT(" & bd & ",4),MID(" & bd & ",4,2),LEFT(" & bd & ",2))," & _
+              "DATE(RIGHT(B1,4),MID(B1,4,2),LEFT(B1,2)),""Y"")"
+    Dim g As String: g = "UPPER(TRIM(" & SRef("Gender") & "))"
+    Dim sexExpr As String
+    sexExpr = "IF(" & g & "=""M"",5,IF(" & g & "=""F"",-161,NA()))"
+    Dim bmr As String, tdee As String
+    bmr = "(10*C2+6.25*" & SRef("Height") & "-5*" & ageExpr & "+" & sexExpr & ")"
+    tdee = "(" & bmr & "*" & SRef("TDEE Multiplier") & ")"
+    ws.Range("C5").Formula = "=ROUND(" & SRef("Daily Protein perKg") & "*C2,2)"
+    ws.Range("C7").Formula = "=ROUND(IF(LOWER(TRIM(" & SRef("Calorie Type") & "))=""surplus""," & _
+                             tdee & "+" & SRef("Daily Calories") & "," & _
+                             tdee & "-" & SRef("Daily Calories") & "),2)"
+    ws.Range("C6").Formula = "=ROUND(C7*" & SRef("Daily Fat perKg") & ",2)"
+End Sub
+
+Public Sub WriteNeededValues(ByVal ws As Worksheet, ByVal protein As Double, _
+                             ByVal fatCalories As Double, ByVal calories As Double)
+    ws.Range("C5").Formula = ""
+    ws.Range("C6").Formula = ""
+    ws.Range("C7").Formula = ""
+    ws.Range("C5").Value = protein
+    ws.Range("C6").Value = fatCalories
+    ws.Range("C7").Value = calories
+End Sub
+
+' Calories "Left" is good in opposite directions depending on the goal, so the conditional
+' format has to follow calorie_type: the snapshot's on a frozen day, the live setting on an
+' open one. Previously hardcoded to >= 0, which was wrong for a surplus day.
+Public Sub ApplyCalorieLeftColor(ByVal ws As Worksheet, ByVal calorieType As Variant)
+    Dim t As String
+    t = LCase$(Trim$(CStr(calorieType & "")))
+    If t = "surplus" Then
+        ColorLeftCell ws.Range("D7"), xlLessEqual
+    Else
+        ColorLeftCell ws.Range("D7"), xlGreaterEqual
+    End If
+End Sub
+
 ' Colour a "Left" cell: green when the goal is met (goodOp vs 0), red otherwise.
 ' Colours match the original workbook: green #92D050, red #FF0000.
 Private Sub ColorLeftCell(ByVal rng As Range, ByVal goodOp As XlFormatConditionOperator)
@@ -266,31 +352,16 @@ Public Sub BuildPlanLayout()
         fCells = fCells & ColLetter(sc + 3) & FIXED_TOTAL_ROW
         cCells = cCells & ColLetter(sc + 4) & FIXED_TOTAL_ROW
     Next i
-    ws.Range("B5").Formula = "=ROUND(SUM(" & pCells & "),2)"
-    ws.Range("B6").Formula = "=ROUND(SUM(" & fCells & ")*9,2)"
-    ws.Range("B7").Formula = "=ROUND(SUM(" & cCells & "),2)"
-
-    ' Needed (target): values fetched by name from the Settings A/B table; weight C2.
-    ' BMR/TDEE folded inline (not shown anywhere). Left = Needed - Daily.
-    ' age computed inline from Birthday vs the shown date (B1); DATE(RIGHT/MID/LEFT)
-    ' parses the dd/mm/yyyy text locale-independently.
-    Dim bd As String: bd = SRef("Birthday")
-    Dim ageExpr As String
-    ageExpr = "DATEDIF(DATE(RIGHT(" & bd & ",4),MID(" & bd & ",4,2),LEFT(" & bd & ",2))," & _
-              "DATE(RIGHT(B1,4),MID(B1,4,2),LEFT(B1,2)),""Y"")"
-    Dim bmr As String, tdee As String
-    bmr = "(10*C2+6.25*" & SRef("Height") & "-5*" & ageExpr & "+IF(" & SRef("Gender") & "=""M"",5,-161))"
-    tdee = "(" & bmr & "*" & SRef("TDEE Multiplier") & ")"
-    ws.Range("C5").Formula = "=ROUND(" & SRef("Daily Protein perKg") & "*C2,2)"
-    ws.Range("C7").Formula = "=ROUND(IF(" & SRef("Calorie Type") & "=""surplus""," & tdee & "+" & SRef("Daily Calories") & "," & tdee & "-" & SRef("Daily Calories") & "),2)"
-    ws.Range("C6").Formula = "=ROUND(C7*" & SRef("Daily Fat perKg") & ",2)"
+    WriteDailyFormulas ws, pCells, fCells, cCells
+    WriteNeededFormulas ws
     ws.Range("D5").Formula = "=ROUND(C5-B5,2)"
     ws.Range("D6").Formula = "=ROUND(C6-B6,2)"
     ws.Range("D7").Formula = "=ROUND(C7-B7,2)"
-    ' colour Left: protein good (green) when <= 0; fat & calories good when >= 0; else red
+    ' colour Left: protein good (green) when <= 0; fat & calories good when >= 0; else red.
+    ' Calories depend on the goal: a deficit day wants Left >= 0, a surplus day Left <= 0.
     ColorLeftCell ws.Range("D5"), xlLessEqual
     ColorLeftCell ws.Range("D6"), xlGreaterEqual
-    ColorLeftCell ws.Range("D7"), xlGreaterEqual
+    ApplyCalorieLeftColor ws, modSettings.GetSettingsDict("Calorie Type")
 
     ws.Range("A1:D7").Borders.LineStyle = xlContinuous
     ws.Range("A1:D7").Borders(xlEdgeRight).LineStyle = xlNone   ' no vertical line at the sticky edge
@@ -486,7 +557,27 @@ Private Sub ApplyMealBorders(ByVal ws As Worksheet, ByVal startCol As Long, ByVa
     ws.Range(ws.Cells(ITEM_FIRST_ROW, startCol), ws.Cells(lastRegion, startCol + 1)).Locked = True
     If Not signed And Not modState.GetDayClosed() Then
         ws.Range(ws.Cells(ITEM_FIRST_ROW, startCol), ws.Cells(boxLast, startCol + 1)).Locked = False
+        LockGroupRefWeights ws, startCol, boxLast
     End If
+End Sub
+
+' A food row naming a group (Fruits/Nuts/Vegetables) is a REFERENCE to that group meal: its
+' weight is meaningless and its macros are derived from the group's own totals. The server
+' stores such a weight as NULL and the other clients render the field read-only, so the cell
+' must be locked here too — otherwise a value typed in Excel is silently discarded on save.
+Public Sub LockGroupRefWeights(ByVal ws As Worksheet, ByVal startCol As Long, ByVal boxLast As Long)
+    Dim r As Long, nm As String
+    For r = ITEM_FIRST_ROW To boxLast
+        nm = UCase$(Trim$(CStr(ws.Cells(r, startCol).Value)))
+        If nm = "FRUITS" Or nm = "NUTS" Or nm = "VEGETABLES" Then
+            ws.Cells(r, startCol + 1).Locked = True
+            ' Clear anything already typed, so a rename onto a group name doesn't leave a
+            ' stale weight sitting in a now-locked cell.
+            If CStr(ws.Cells(r, startCol + 1).Value) <> "" Then
+                ws.Cells(r, startCol + 1).ClearContents
+            End If
+        End If
+    Next r
 End Sub
 
 ' Redraw every meal's border to fit its current item count + sign state.

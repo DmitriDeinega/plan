@@ -1779,7 +1779,14 @@
     }
 
     function round2(n){
-      return Math.round((n + Number.EPSILON) * 100) / 100;
+      // Half-up to 2dp, matching the backend's Decimal(ROUND_HALF_UP).
+      // The old `+ Number.EPSILON` trick is too small a nudge once n is more than ~1:
+      // round2(10.075) returned 10.07 because 10.075 is stored as 10.0749999...
+      // Rounding the scaled value to 15 significant digits first removes that representation
+      // error, so the .005 cases land on the intended side.
+      if (!isFinite(n)) return n;
+      const s = n < 0 ? -1 : 1;
+      return s * Math.round(Number((Math.abs(n) * 100).toPrecision(15))) / 100;
     }
 
     function ddmmyyyyFromDateObj(d){
@@ -1942,6 +1949,13 @@
 
     let currentDayDdmmyyyy = "";
     let currentDayDayClosed = false;
+
+    // Frozen goals/totals for a CLOSED day, as returned by the server. Null on an open day,
+    // where everything is computed live from current settings. Reset on every renderDay so a
+    // newly shown day can never inherit the previous one's frozen values.
+    let currentDayTargets = null;
+    let currentDaySnapshot = null;
+    let currentDayNutrition = null;
 
     let currentDayTemplate = null;
 
@@ -2823,26 +2837,71 @@
       propagateGroupRow(groupMealUpper, gt.protein, gt.fat, gt.calories);
     }
 
+    // Whole elapsed years, calendar-exact. Mirrors compute_age_years() in the backend; the old
+    // elapsed-ms / 365.2425 approximation drifted by a year around birthdays.
+    function ageYears(birthDdmmyyyy, onDdmmyyyy){
+      const bd = parseDdmmyyyy(birthDdmmyyyy);
+      const cur = parseDdmmyyyy(onDdmmyyyy);
+      if (!bd || !cur) return 0;
+      const cy = cur.getFullYear();
+      const isLeap = (cy % 4 === 0 && (cy % 100 !== 0 || cy % 400 === 0));
+      let efM = bd.getMonth() + 1, efD = bd.getDate();
+      // A 29-Feb birthday has no anniversary in a common year; treat it as passed on 1 Mar.
+      if (efM === 2 && efD === 29 && !isLeap){ efM = 3; efD = 1; }
+      const cm = cur.getMonth() + 1, cd = cur.getDate();
+      const hadBirthday = (cm > efM) || (cm === efM && cd >= efD);
+      return cy - bd.getFullYear() - (hadBirthday ? 0 : 1);
+    }
+
     function computeNeeded(){
+      // A closed day shows the targets the server froze when it was ended, so editing
+      // settings later cannot rewrite what that day was measured against.
+      if (currentDayTargets){
+        return {
+          proteinNeeded: round2(Number(currentDayTargets.protein || 0)),
+          caloriesNeeded: round2(Number(currentDayTargets.calories || 0)),
+          fatCaloriesNeeded: round2(Number(currentDayTargets.fat_calories || 0))
+        };
+      }
+
+      // Open day: compute live, mirroring backend app/core/targets.py exactly.
       const weight = Number($("#weightInput").value || 0);
       const proteinNeeded = Number(settings.daily.protein) * weight;
 
-      const bd = parseDdmmyyyy(settings.person.birth_day);
-      const cur = parseDdmmyyyy(currentDayDdmmyyyy);
-      const age = Math.floor((cur.getTime() - bd.getTime()) / (365.2425 * 24 * 3600 * 1000));
+      const age = ageYears(settings.person.birth_day, currentDayDdmmyyyy);
+      // M/F only — the backend refuses to freeze anything else, so silently treating an
+      // unknown value as female here would show a target the server would never store.
+      const g = String(settings.person.gender || "").trim().toUpperCase();
+      if (g !== "M" && g !== "F"){
+        throw new Error(`Invalid gender "${settings.person.gender}": must be "M" or "F"`);
+      }
+      const sexTerm = g === "M" ? 5 : -161;
 
-      const caloriesNeeded =
-        (10 * weight + 6.25 * Number(settings.person.height) - 5 * age + 5) *
-        Number(settings.daily.tdee_multiplier) -
-        Number(settings.daily.calories);
+      const tdee =
+        (10 * weight + 6.25 * Number(settings.person.height) - 5 * age + sexTerm) *
+        Number(settings.daily.tdee_multiplier);
 
-      const fatCaloriesNeeded = caloriesNeeded * Number(settings.daily.fat);
+      const isSurplus = String(settings.daily.calorie_type || "").trim().toLowerCase() === "surplus";
+      const caloriesNeeded = round2(
+        isSurplus ? tdee + Number(settings.daily.calories) : tdee - Number(settings.daily.calories)
+      );
+      // The ROUNDED calorie target, matching Excel (C6 references C7) and Android.
+      const fatCaloriesNeeded = round2(caloriesNeeded * Number(settings.daily.fat));
 
       return {
         proteinNeeded: round2(proteinNeeded),
-        caloriesNeeded: round2(caloriesNeeded),
-        fatCaloriesNeeded: round2(fatCaloriesNeeded)
+        caloriesNeeded: caloriesNeeded,
+        fatCaloriesNeeded: fatCaloriesNeeded
       };
+    }
+
+    /** calorie_type for the shown day: the snapshot's on a closed day (so its colours stay
+     *  as they were), the live setting otherwise. */
+    function activeCalorieType(){
+      if (currentDaySnapshot && currentDaySnapshot.daily && currentDaySnapshot.daily.calorie_type){
+        return currentDaySnapshot.daily.calorie_type;
+      }
+      return settings.daily.calorie_type;
     }
 
     function setMiniState(el, ok){
@@ -2864,6 +2923,14 @@
         totalFat += Number(footer.querySelector("[data-sum='f']").textContent || 0);
         totalCalories += Number(footer.querySelector("[data-sum='c']").textContent || 0);
       });
+
+      // A closed day shows the totals the server froze at End Day rather than a fresh sum of
+      // the rows, so history is exactly what was recorded.
+      if (currentDayNutrition){
+        totalProtein = Number(currentDayNutrition.protein || 0);
+        totalFat = Number(currentDayNutrition.fat || 0);
+        totalCalories = Number(currentDayNutrition.calories || 0);
+      }
 
       totalProtein = round2(totalProtein);
       totalFat = round2(totalFat);
@@ -2887,7 +2954,9 @@
       $("#leftFatCal").textContent = leftFat;
       $("#leftCalories").textContent = leftCalories;
 
-      const calorieType = settings.daily.calorie_type;
+      // Snapshot's calorie_type on a closed day: flipping the live setting must not repaint
+      // history's colours.
+      const calorieType = activeCalorieType();
       setMiniState($("#miniProtein"),  leftProtein  <= 0);
       setMiniState($("#miniFat"),      leftFat      >= 0);
       setMiniState($("#miniCalories"), calorieType === "deficit" ? leftCalories >= 0 : leftCalories <= 0);
@@ -3331,15 +3400,22 @@
                 // Animate collapse, then re-render after transition
                 currentCard.classList.add("animating");
                 currentCard.classList.add("collapsed");
+                // Which day this draft belongs to; compared again when the animation ends.
+                const seqAtSign = dayLoadSeq;
                 const done = (ev) => {
-                  if (ev.propertyName !== "max-height") return;
+                  // ev is undefined when called from the safety timeout.
+                  if (ev && ev.propertyName !== "max-height") return;
                   currentCard.classList.remove("animating");
                   cardBody.removeEventListener("transitionend", done);
+                  clearTimeout(fallbackTimer);
+                  // The user may have navigated to another day during the animation; rendering
+                  // this stale draft would overwrite that day's frozen values with live ones.
+                  if (seqAtSign !== dayLoadSeq) return;
                   renderDay(draftRender);
                 };
                 cardBody.addEventListener("transitionend", done);
                 // Safety fallback in case transitionend doesn't fire
-                setTimeout(() => { cardBody.removeEventListener("transitionend", done); renderDay(draftRender); }, 400);
+                const fallbackTimer = setTimeout(done, 400);
               } else {
                 renderDay(draftRender);
               }
@@ -3659,6 +3735,11 @@
 
     function renderDay(day){
       currentDayDayClosed = !!day.day_closed;
+
+      // Unconditional (not ||=): a day with no frozen values must CLEAR the previous day's.
+      currentDayTargets   = day.targets || null;
+      currentDaySnapshot  = day.settings_snapshot || null;
+      currentDayNutrition = day.nutrition || null;
 
       $("#weightInput").value = day.weight != null ? String(day.weight) : "";
       $("#weightInput").disabled = !!day.day_closed;

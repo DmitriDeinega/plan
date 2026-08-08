@@ -25,12 +25,43 @@ data class Nutrition(
     val calories: Float
 )
 
+/** The "Needed" figures as frozen when the day was closed. Null on an open day. */
+data class Targets(
+    val protein: Float = 0f,
+    val fat_calories: Float = 0f,
+    val calories: Float = 0f
+)
+
+data class SnapshotDaily(
+    val protein: Float = 0f,
+    val fat: Float = 0f,
+    val calories: Float = 0f,
+    val calorie_type: String = "",
+    val tdee_multiplier: Float = 0f
+)
+
+data class SnapshotPerson(
+    val height: Float = 0f,
+    val gender: String = "",
+    val birth_day: String = ""
+)
+
+/** Settings as they were when the day was closed; its calorie_type keeps a closed day's
+ *  deficit/surplus interpretation stable after the live setting changes. */
+data class SettingsSnapshot(
+    val daily: SnapshotDaily = SnapshotDaily(),
+    val person: SnapshotPerson = SnapshotPerson()
+)
+
 data class Day(
     val date: String,
     val weight: Float,
     val day_closed: Boolean,
     val meals: List<Meal>,
-    val nutrition: Nutrition?
+    val nutrition: Nutrition?,
+    // Present only on closed days. Older backends omit them entirely, hence nullable.
+    val targets: Targets? = null,
+    val settings_snapshot: SettingsSnapshot? = null
 )
 
 data class FoodItem(
