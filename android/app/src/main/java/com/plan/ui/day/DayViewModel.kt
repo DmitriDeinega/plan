@@ -56,6 +56,12 @@ data class DayUiState(
     val isSaving: Boolean = false,
     val startDate: String = "",
     val openDate: String = "",
+    /** Frozen goals/totals for a CLOSED day, straight from the server. Null on an open day,
+     *  where everything is computed live. Always replaced (or cleared) in applyDay so a newly
+     *  loaded day can never inherit the previous day's frozen values. */
+    val frozenTargets: Targets? = null,
+    val frozenSnapshot: SettingsSnapshot? = null,
+    val frozenNutrition: Nutrition? = null,
     /** True when the user has unsaved edits; blocks the on-resume refresh from clobbering them. */
     val dirty: Boolean = false,
     val isRefreshing: Boolean = false
@@ -114,6 +120,10 @@ class DayViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DayUiState())
     val uiState: StateFlow<DayUiState> = _uiState.asStateFlow()
 
+    /** Incremented on every day load. A response whose generation is stale is discarded, so
+     *  fast A -> B navigation can't let A land after B and restore A's frozen values. */
+    private var dayLoadSeq = 0
+
     init {
         loadInitialData()
     }
@@ -125,10 +135,31 @@ class DayViewModel @Inject constructor(
             val foodsResult = repository.getFoods()
             val settings = if (settingsResult is Result.Success) settingsResult.data else _uiState.value.settings
             val foods = if (foodsResult is Result.Success) foodsResult.data else _uiState.value.foodItems
-            _uiState.update { it.copy(settings = settings, foodItems = foods) }
+            _uiState.update {
+                it.copy(
+                    settings = settings,
+                    foodItems = foods,
+                    // startDate also comes from settings; refreshing it here keeps the
+                    // back-navigation bound correct if it ever changes server-side.
+                    startDate = settings?.start_date ?: it.startDate
+                )
+            }
+            // Keep the open-day bound current. It gates the ">" button and the date picker's
+            // upper limit, and it moves whenever a day is ended server-side (including by the
+            // web/Excel clients or the automatic midnight rollover).
+            refreshOpenDate()
             // Re-load the current day to pick up server-side edits — but NOT while the user
             // has unsaved changes, or returning to the app would silently wipe their input.
             if (!_uiState.value.dirty) loadDayByDate(_uiState.value.date)
+        }
+    }
+
+    /** Fetch just the open day's date. Unlike loadOpenDay() this does not touch the shown day,
+     *  so it is safe to call while the user is looking at some other date. */
+    private suspend fun refreshOpenDate() {
+        when (val r = repository.getOpenDay()) {
+            is Result.Success -> _uiState.update { it.copy(openDate = r.data.date) }
+            is Result.Error -> Unit   // keep the previous bound; a transient failure shouldn't unlock nav
         }
     }
 
@@ -141,8 +172,9 @@ class DayViewModel @Inject constructor(
             val settings = if (settingsResult is Result.Success) settingsResult.data else _uiState.value.settings
             val foods = if (foodsResult is Result.Success) foodsResult.data else _uiState.value.foodItems
             _uiState.update { it.copy(settings = settings, foodItems = foods) }
+            val seq = ++dayLoadSeq
             when (val result = repository.getDay(_uiState.value.date)) {
-                is Result.Success -> applyDay(result.data)
+                is Result.Success -> if (seq == dayLoadSeq) applyDay(result.data)
                 is Result.Error -> _uiState.update { it.copy(snackMessage = result.message) }
             }
             _uiState.update { it.copy(isRefreshing = false) }
@@ -169,13 +201,21 @@ class DayViewModel @Inject constructor(
 
     private fun loadOpenDay() {
         viewModelScope.launch {
+            val seq = ++dayLoadSeq
             when (val result = repository.getOpenDay()) {
                 is Result.Success -> {
+                    // Record the open date even if a newer load has superseded this one: it is
+                    // a property of the server, not of the day being shown, and it is the only
+                    // thing gating ">" / the date picker's upper bound. Returning early here
+                    // (as the stale-response guard used to) left it empty whenever the ON_RESUME
+                    // refresh raced startup — which disabled ">" for the whole session.
                     _uiState.update { it.copy(openDate = result.data.date) }
+                    if (seq != dayLoadSeq) return@launch
                     applyDay(result.data)
                 }
-                is Result.Error -> _uiState.update {
-                    it.copy(isLoading = false, error = result.message)
+                is Result.Error -> {
+                    if (seq != dayLoadSeq) return@launch
+                    _uiState.update { it.copy(isLoading = false, error = result.message) }
                 }
             }
         }
@@ -184,12 +224,21 @@ class DayViewModel @Inject constructor(
     fun loadDayByDate(date: String) {
         viewModelScope.launch {
             val prevDate = _uiState.value.date
+            val seq = ++dayLoadSeq
             _uiState.update { it.copy(isLoading = true, error = null) }
             when (val result = repository.getDay(date)) {
-                is Result.Success -> applyDay(result.data)
-                is Result.Error -> _uiState.update {
-                    // Roll back to the previous day (matches web behavior) instead of leaving the screen empty.
-                    it.copy(isLoading = false, date = prevDate, snackMessage = result.message)
+                is Result.Success -> {
+                    // A newer load started while this one was in flight — dropping it stops an
+                    // older day's frozen targets from overwriting the day now on screen.
+                    if (seq != dayLoadSeq) return@launch
+                    applyDay(result.data)
+                }
+                is Result.Error -> {
+                    if (seq != dayLoadSeq) return@launch
+                    _uiState.update {
+                        // Roll back to the previous day (matches web behavior) instead of leaving the screen empty.
+                        it.copy(isLoading = false, date = prevDate, snackMessage = result.message)
+                    }
                 }
             }
         }
@@ -218,7 +267,16 @@ class DayViewModel @Inject constructor(
         val weightStr = day.weight.let { w ->
             if (w == w.toLong().toFloat()) w.toLong().toString() else w.toString()  // 75.0 -> "75"
         }
-        val withGroups = ensureTrailingEmptyRows(propagateGroupReferences(mealUiStates), day.day_closed)
+        // On load, a meal that comes back signed starts collapsed (and a group locked by one
+        // collapses with it) — the day opens showing only what still needs work.
+        val locked = computeDerivedLockedGroups(mealUiStates)
+        val collapsed = mealUiStates.map { m ->
+            val isGroup = GROUP_NAMES.contains(m.name)
+            m.copy(collapsed = if (isGroup) locked.contains(m.name) else m.mealClosed)
+        }
+        val withGroups = ensureTrailingEmptyRows(
+            syncGroupClosedFlags(propagateGroupReferences(collapsed)), day.day_closed
+        )
         _uiState.update { state ->
             state.copy(
                 isLoading = false,
@@ -226,7 +284,15 @@ class DayViewModel @Inject constructor(
                 weight = weightStr,
                 dayClosed = day.day_closed,
                 meals = withGroups,
-                nutrition = computeNutrition(withGroups, weightStr, state.settings, day.date),
+                // Unconditional assignment (not `?:`) — a day without frozen values must CLEAR
+                // whatever the previously shown day left behind.
+                frozenTargets = day.targets,
+                frozenSnapshot = day.settings_snapshot,
+                frozenNutrition = day.nutrition,
+                nutrition = computeNutrition(
+                    withGroups, weightStr, state.settings, day.date,
+                    day.targets, day.settings_snapshot, day.nutrition
+                ),
                 dirty = false
             )
         }
@@ -258,7 +324,8 @@ class DayViewModel @Inject constructor(
             state.copy(
                 weight = w,
                 dirty = true,
-                nutrition = computeNutrition(state.meals, w, state.settings, state.date)
+                nutrition = computeNutrition(state.meals, w, state.settings, state.date,
+                    state.frozenTargets, state.frozenSnapshot, state.frozenNutrition)
             )
         }
     }
@@ -302,11 +369,16 @@ class DayViewModel @Inject constructor(
                 }
             }
             val newMeals = meals.also { it[mealIndex] = meal.copy(foods = foods) }
-            val withGroups = ensureTrailingEmptyRows(propagateGroupReferences(newMeals), state.dayClosed)
+            // Renaming a row can add or remove a group reference, which changes which groups
+            // are derived-closed — re-sync so the next save matches the server's rule.
+            val withGroups = ensureTrailingEmptyRows(
+                syncGroupClosedFlags(propagateGroupReferences(newMeals)), state.dayClosed
+            )
             state.copy(
                 meals = withGroups,
                 dirty = true,
-                nutrition = computeNutrition(withGroups, state.weight, state.settings, state.date)
+                nutrition = computeNutrition(withGroups, state.weight, state.settings, state.date,
+                    state.frozenTargets, state.frozenSnapshot, state.frozenNutrition)
             )
         }
     }
@@ -342,7 +414,8 @@ class DayViewModel @Inject constructor(
             state.copy(
                 meals = withGroups,
                 dirty = true,
-                nutrition = computeNutrition(withGroups, state.weight, state.settings, state.date)
+                nutrition = computeNutrition(withGroups, state.weight, state.settings, state.date,
+                    state.frozenTargets, state.frozenSnapshot, state.frozenNutrition)
             )
         }
     }
@@ -403,11 +476,15 @@ class DayViewModel @Inject constructor(
             val meal = meals[mealIndex]
             val newFoods = meal.foods.toMutableList().also { it.removeAt(foodIndex) }
             meals[mealIndex] = meal.copy(foods = newFoods)
-            val withGroups = ensureTrailingEmptyRows(propagateGroupReferences(meals), state.dayClosed)
+            // Removing a group-reference row can unlock that group.
+            val withGroups = ensureTrailingEmptyRows(
+                syncGroupClosedFlags(propagateGroupReferences(meals)), state.dayClosed
+            )
             state.copy(
                 meals = withGroups,
                 dirty = true,
-                nutrition = computeNutrition(withGroups, state.weight, state.settings, state.date)
+                nutrition = computeNutrition(withGroups, state.weight, state.settings, state.date,
+                    state.frozenTargets, state.frozenSnapshot, state.frozenNutrition)
             )
         }
     }
@@ -435,8 +512,26 @@ class DayViewModel @Inject constructor(
                     meals[i] = m.copy(collapsed = locked.contains(m.name))
                 }
             }
-            val withGroups = ensureTrailingEmptyRows(meals, state.dayClosed)
+            val withGroups = ensureTrailingEmptyRows(syncGroupClosedFlags(meals), state.dayClosed)
             state.copy(meals = withGroups, dirty = true)
+        }
+    }
+
+    /**
+     * A group meal's `meal_closed` is DERIVED, never chosen: the server requires it to equal
+     * "is this group referenced by some signed regular meal". Keeping the flag in sync here
+     * (rather than only in the UI's collapsed state) is what stops the two save errors
+     * "Group meal X must be signed because it appears in a signed meal" and
+     * "Group meal X cannot be signed directly".
+     */
+    private fun syncGroupClosedFlags(meals: List<MealUiState>): List<MealUiState> {
+        val locked = computeDerivedLockedGroups(meals)
+        return meals.map { m ->
+            if (!GROUP_NAMES.contains(m.name)) m
+            else {
+                val shouldBeClosed = locked.contains(m.name)
+                if (m.mealClosed == shouldBeClosed) m else m.copy(mealClosed = shouldBeClosed)
+            }
         }
     }
 
@@ -482,14 +577,20 @@ class DayViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
             val weight = state.weight.toFloatOrNull() ?: 0f
-            val meals = state.meals.map { meal ->
+            // Final guard: the server rejects a payload whose group meal_closed flags don't
+            // match "referenced by a signed meal", so derive them once more on the way out.
+            val meals = syncGroupClosedFlags(state.meals).map { meal ->
                 Meal(
                     name = meal.name,
                     meal_closed = meal.mealClosed,
                     foods = meal.foods.filter { it.name.isNotBlank() }.map { f ->
                         Food(
                             name = f.name,
-                            weight = f.weight.toFloatOrNull() ?: 0f,
+                            // A group-reference row genuinely has no weight — send null, not
+                            // 0. Sending 0 would store 0.00 in a column that is nullable
+                            // precisely to keep "no weight" distinct from "weighs nothing".
+                            weight = if (isGroupReference(f.name)) null
+                                     else f.weight.toFloatOrNull() ?: 0f,
                             protein = f.protein,
                             fat = f.fat,
                             calories = f.calories
@@ -579,7 +680,10 @@ class DayViewModel @Inject constructor(
         meals: List<MealUiState>,
         weight: String,
         settings: Settings?,
-        currentDate: String
+        currentDate: String,
+        frozenTargets: Targets? = null,
+        frozenSnapshot: SettingsSnapshot? = null,
+        frozenNutrition: Nutrition? = null
     ): NutritionSummary {
         var totalProtein = 0f
         var totalFat = 0f
@@ -596,6 +700,25 @@ class DayViewModel @Inject constructor(
         }
 
         val bodyWeight = weight.toFloatOrNull() ?: 0f
+
+        // A closed day shows what the server froze at End Day, not a fresh computation: that
+        // is the whole point of the snapshot. Totals come from `nutrition`, goals from
+        // `targets`, and the deficit/surplus reading from the snapshot's calorie_type — so
+        // later edits to the live settings can change neither the numbers nor their colours.
+        if (frozenTargets != null) {
+            val fatCals = frozenNutrition?.let { roundTo2(it.fat * 9f) } ?: roundTo2(totalFat * 9f)
+            return NutritionSummary(
+                protein = roundTo2(frozenNutrition?.protein ?: totalProtein),
+                fatCalories = fatCals,
+                calories = roundTo2(frozenNutrition?.calories ?: totalCalories),
+                proteinNeeded = frozenTargets.protein,
+                fatCaloriesNeeded = frozenTargets.fat_calories,
+                caloriesNeeded = frozenTargets.calories,
+                calorieType = frozenSnapshot?.daily?.calorie_type
+                    ?: settings?.daily?.calorie_type ?: ""
+            )
+        }
+
         val fatCalories = roundTo2(totalFat * 9f)
 
         // Compute "Needed" whenever settings are present — even at weight 0 (web behaviour).
@@ -608,17 +731,31 @@ class DayViewModel @Inject constructor(
             )
         }
 
-        // Match web/plan.html computeNeeded():
-        //   proteinNeeded = daily.protein * weight
-        //   caloriesNeeded = (10*w + 6.25*h - 5*age + 5) * tdee_multiplier - daily.calories
-        //   fatCaloriesNeeded = caloriesNeeded * daily.fat   (daily.fat is a fraction, not %)
+        // Open day: compute live, mirroring backend app/core/targets.py exactly.
+        //   bmr  = 10*w + 6.25*h - 5*age + (gender=="M" ? 5 : -161)
+        //   cals = round2(surplus ? tdee + daily.calories : tdee - daily.calories)
+        //   fatCals = round2(ROUNDED cals * daily.fat)
         val proteinNeeded = roundTo2(settings.daily.protein * bodyWeight)
         val age = computeAgeYears(settings.person.birth_day, currentDate)
+        // M/F only. The backend refuses to freeze any other value, so rather than invent a
+        // number the app would never be able to save, show totals with no target at all.
+        val sexTerm = when (settings.person.gender.trim().uppercase()) {
+            "M" -> 5f
+            "F" -> -161f
+            else -> return NutritionSummary(
+                protein = roundTo2(totalProtein),
+                fatCalories = fatCalories,
+                calories = roundTo2(totalCalories),
+                calorieType = settings.daily.calorie_type
+            )
+        }
         val tdee =
-            (10f * bodyWeight + 6.25f * settings.person.height - 5f * age + 5f) *
-                    settings.daily.tdee_multiplier -
-                    settings.daily.calories
-        val caloriesNeeded = roundTo2(tdee)
+            (10f * bodyWeight + 6.25f * settings.person.height - 5f * age + sexTerm) *
+                    settings.daily.tdee_multiplier
+        val isSurplus = settings.daily.calorie_type.trim().lowercase() == "surplus"
+        val caloriesNeeded = roundTo2(
+            if (isSurplus) tdee + settings.daily.calories else tdee - settings.daily.calories
+        )
         val fatCaloriesNeeded = roundTo2(caloriesNeeded * settings.daily.fat)
 
         return NutritionSummary(
@@ -632,13 +769,23 @@ class DayViewModel @Inject constructor(
         )
     }
 
+    /** Whole elapsed years, calendar-exact — matches compute_age_years() in the backend.
+     *  The old elapsed-ms/365.2425 approximation drifted by a year near birthdays. */
     private fun computeAgeYears(birthDdMmYyyy: String, currentDdMmYyyy: String): Int {
         return try {
             val sdf = SimpleDateFormat("ddMMyyyy", Locale.US)
-            val birth = sdf.parse(birthDdMmYyyy) ?: return 0
-            val current = sdf.parse(currentDdMmYyyy) ?: return 0
-            val ms = current.time - birth.time
-            (ms.toDouble() / (365.2425 * 24 * 3600 * 1000.0)).toInt()
+            val bCal = Calendar.getInstance().apply { time = sdf.parse(birthDdMmYyyy)!! }
+            val cCal = Calendar.getInstance().apply { time = sdf.parse(currentDdMmYyyy)!! }
+            val bM = bCal.get(Calendar.MONTH) + 1
+            val bD = bCal.get(Calendar.DAY_OF_MONTH)
+            val cM = cCal.get(Calendar.MONTH) + 1
+            val cD = cCal.get(Calendar.DAY_OF_MONTH)
+            val cY = cCal.get(Calendar.YEAR)
+            val isLeap = (cY % 4 == 0 && (cY % 100 != 0 || cY % 400 == 0))
+            // A 29-Feb birthday has no anniversary in a common year; treat it as passed on 1 Mar.
+            val (efM, efD) = if (bM == 2 && bD == 29 && !isLeap) 3 to 1 else bM to bD
+            val hadBirthday = (cM > efM) || (cM == efM && cD >= efD)
+            cY - bCal.get(Calendar.YEAR) - (if (hadBirthday) 0 else 1)
         } catch (e: Exception) { 0 }
     }
 

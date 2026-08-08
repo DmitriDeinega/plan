@@ -33,9 +33,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.PopupProperties
@@ -104,7 +106,10 @@ fun DayScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
+            // imePadding here (not on the Scaffold, whose insets are zeroed so the body can
+            // manage its own) lifts the snackbar above the keyboard. Without it a Save while
+            // an input is focused shows its result behind the IME, i.e. invisibly.
+            SnackbarHost(snackbarHostState, modifier = Modifier.imePadding()) { data ->
                 val msg = data.visuals.message
                 // Green only for known successes; everything else (incl. validation) is red.
                 val ok = msg.contains("success", true) || msg.contains("saved", true) ||
@@ -198,17 +203,36 @@ fun DayScreen(
                     contentType = { _, _ -> "meal" }
                 ) { mealIndex, meal ->
                     val isGroup = GROUP_NAMES.contains(meal.name)
+                    // Remember the callbacks per row. Allocating them inline made every one a
+                    // new object on each recomposition, so MealCard could never skip and all
+                    // eight cards (plus their food rows) rebuilt on every keystroke — the main
+                    // source of the scroll jank. Keyed by the values they capture.
+                    val mealName = meal.name
+                    val onToggleCollapse = remember(mealIndex) { { viewModel.toggleMealCollapsed(mealIndex) } }
+                    val onSignMeal = remember(mealIndex) { { viewModel.signMeal(mealIndex) } }
+                    val onFoodNameChange = remember(mealIndex) {
+                        { fi: Int, name: String -> viewModel.updateFoodName(mealIndex, fi, name) }
+                    }
+                    val onFoodWeightChange = remember(mealIndex) {
+                        { fi: Int, w: String -> viewModel.updateFoodWeight(mealIndex, fi, w) }
+                    }
+                    val onRemoveFood = remember(mealIndex) {
+                        { fi: Int -> viewModel.removeFoodRow(mealIndex, fi) }
+                    }
+                    val getSuggestions = remember(mealName) {
+                        { query: String -> viewModel.getSuggestionsForMeal(mealName, query) }
+                    }
                     MealCard(
                         meal = meal,
                         isGroup = isGroup,
                         isDerivedLocked = meal.name in derivedLocked,
                         dayClosed = state.dayClosed,
-                        onToggleCollapse = { viewModel.toggleMealCollapsed(mealIndex) },
-                        onSignMeal = { viewModel.signMeal(mealIndex) },
-                        onFoodNameChange = { fi, name -> viewModel.updateFoodName(mealIndex, fi, name) },
-                        onFoodWeightChange = { fi, w -> viewModel.updateFoodWeight(mealIndex, fi, w) },
-                        onRemoveFood = { fi -> viewModel.removeFoodRow(mealIndex, fi) },
-                        getSuggestions = { query -> viewModel.getSuggestionsForMeal(meal.name, query) }
+                        onToggleCollapse = onToggleCollapse,
+                        onSignMeal = onSignMeal,
+                        onFoodNameChange = onFoodNameChange,
+                        onFoodWeightChange = onFoodWeightChange,
+                        onRemoveFood = onRemoveFood,
+                        getSuggestions = getSuggestions
                     )
                 }
                 }
@@ -284,6 +308,11 @@ private fun DayStickyHeader(
                     // Can move forward up to (and including) the open day.
                     canGoNext = state.openDate.isNotEmpty() &&
                             compareDdMmYyyy(state.date, state.openDate) < 0,
+                    // ...and back to the start date, which is the first day that exists.
+                    canGoPrev = state.startDate.isEmpty() ||
+                            compareDdMmYyyy(state.date, state.startDate) > 0,
+                    minDate = state.startDate,
+                    maxDate = state.openDate,
                     onPrevDay = onPrevDay,
                     onNextDay = onNextDay,
                     onDatePick = onDatePick,
@@ -340,6 +369,11 @@ private fun Bubble(modifier: Modifier = Modifier, content: @Composable () -> Uni
 private fun DateBubble(
     date: String,
     canGoNext: Boolean,
+    canGoPrev: Boolean,
+    /** ddMMyyyy; the first day that exists (settings.start_date). Empty = no lower bound. */
+    minDate: String,
+    /** ddMMyyyy; the currently open day — nothing after it exists. Empty = no upper bound. */
+    maxDate: String,
     onPrevDay: () -> Unit,
     onNextDay: () -> Unit,
     onDatePick: (String) -> Unit,
@@ -351,8 +385,12 @@ private fun DateBubble(
             modifier = Modifier.fillMaxSize().padding(horizontal = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onPrevDay, modifier = Modifier.size(20.dp)) {
-                Icon(Icons.Filled.ChevronLeft, "Previous day", tint = Cyan, modifier = Modifier.size(14.dp))
+            IconButton(onClick = onPrevDay, enabled = canGoPrev, modifier = Modifier.size(20.dp)) {
+                Icon(
+                    Icons.Filled.ChevronLeft, "Previous day",
+                    tint = if (canGoPrev) Cyan else MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(14.dp)
+                )
             }
             // Inner date box (own rounded field, like the web's .dateInput).
             Box(
@@ -366,11 +404,24 @@ private fun DateBubble(
                         val sdf = SimpleDateFormat("ddMMyyyy", Locale.getDefault())
                         val cal = Calendar.getInstance()
                         try { cal.time = sdf.parse(date)!! } catch (_: Exception) {}
-                        DatePickerDialog(
+                        val dlg = DatePickerDialog(
                             context,
                             { _, y, m, d -> onDatePick(String.format(Locale.US, "%02d%02d%04d", d, m + 1, y)) },
                             cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)
-                        ).show()
+                        )
+                        // Grey out dates that don't exist: nothing before the start date, and
+                        // nothing after the open day. Previously every date was selectable and
+                        // an out-of-range pick was silently dropped by the ViewModel's guards,
+                        // so the picker just appeared to do nothing.
+                        // Both bounds land on local midnight of their day, and DatePicker
+                        // treats them as day-inclusive, so the start date and the open day
+                        // themselves stay selectable.
+                        fun millisOf(ddMMyyyy: String): Long? = try {
+                            sdf.parse(ddMMyyyy)?.time
+                        } catch (_: Exception) { null }
+                        millisOf(minDate)?.let { dlg.datePicker.minDate = it }
+                        millisOf(maxDate)?.let { dlg.datePicker.maxDate = it }
+                        dlg.show()
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -742,12 +793,24 @@ private fun MealCard(
                     FoodHeaderRow()
                     meal.foods.forEachIndexed { foodIndex, food ->
                         key(foodIndex) {
+                            // Remembered per row for the same reason as the MealCard callbacks:
+                            // fresh lambdas on every pass would stop FoodRow from skipping, so a
+                            // keystroke in one row re-laid-out every row in the meal.
+                            val onNameChange = remember(foodIndex, onFoodNameChange) {
+                                { s: String -> onFoodNameChange(foodIndex, s) }
+                            }
+                            val onWeightChange = remember(foodIndex, onFoodWeightChange) {
+                                { s: String -> onFoodWeightChange(foodIndex, s) }
+                            }
+                            val onRemove = remember(foodIndex, onRemoveFood) {
+                                { onRemoveFood(foodIndex) }
+                            }
                             FoodRow(
                                 food = food,
                                 readOnly = mealReadOnly,
-                                onNameChange = { onFoodNameChange(foodIndex, it) },
-                                onWeightChange = { onFoodWeightChange(foodIndex, it) },
-                                onRemove = { onRemoveFood(foodIndex) },
+                                onNameChange = onNameChange,
+                                onWeightChange = onWeightChange,
+                                onRemove = onRemove,
                                 getSuggestions = getSuggestions
                             )
                         }
@@ -877,9 +940,15 @@ private fun ValueCol(value: Float, decimals: Int, modifier: Modifier, emphasize:
 
 @Composable
 private fun MealTotalsRow(foods: List<FoodUiState>) {
-    val totalP = foods.fold(0f) { a, f -> a + f.protein }
-    val totalF = foods.fold(0f) { a, f -> a + f.fat }
-    val totalC = foods.fold(0f) { a, f -> a + f.calories }
+    // Memoized: three folds per meal on every recomposition showed up while scrolling.
+    val totals = remember(foods) {
+        var p = 0f; var f = 0f; var c = 0f
+        for (x in foods) { p += x.protein; f += x.fat; c += x.calories }
+        Triple(p, f, c)
+    }
+    val totalP = totals.first
+    val totalF = totals.second
+    val totalC = totals.third
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1064,6 +1133,17 @@ private fun CompactInputCell(
     onFocusChanged: (Boolean) -> Unit = {}
 ) {
     var focused by remember { mutableStateOf(false) }
+    // Held as TextFieldValue, not String, so the cursor position is part of the state.
+    // With a plain String the caret stays where it was when the text is replaced from outside
+    // (picking "Chicken Breast" over a typed "chi" left the caret at offset 3, so the next
+    // backspace deleted mid-word -> "Chcken Breast").
+    var tfv by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    // Re-sync only when the incoming text actually differs from what the field shows, and put
+    // the caret at the end of the new text. Comparing text (not the whole value) keeps ordinary
+    // typing and manual caret moves from being clobbered on every recomposition.
+    if (value != tfv.text) {
+        tfv = TextFieldValue(value, TextRange(value.length))
+    }
     Box(
         modifier = modifier
             .height(40.dp)
@@ -1077,8 +1157,11 @@ private fun CompactInputCell(
         contentAlignment = Alignment.Center
     ) {
         BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = tfv,
+            onValueChange = { nv ->
+                tfv = nv
+                if (nv.text != value) onValueChange(nv.text)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { fs -> focused = fs.isFocused; onFocusChanged(fs.isFocused) },

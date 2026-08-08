@@ -60,7 +60,9 @@ fun FoodsScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
+            // Lift above the keyboard — the Scaffold's insets are zeroed, so without this the
+            // save result renders behind the IME while an input is focused.
+            SnackbarHost(snackbarHostState, modifier = Modifier.imePadding()) { data ->
                 val msg = data.visuals.message
                 val ok = msg.contains("saved", true) || msg.contains("success", true)
                 val bg = if (ok) OkGreen else DangerRed
