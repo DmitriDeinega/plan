@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -20,8 +21,7 @@ def create_app() -> FastAPI:
     logger = setup_logging(level=cfg.log_level)
 
     bl = BL(
-        mongo_uri=cfg.mongo_uri,
-        mongo_db=cfg.mongo_db,
+        pg_dsn=cfg.pg_dsn,
         logger=logger
     )
 
@@ -37,6 +37,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
+            # Home server (Tailscale) — the new prod origin.
+            "https://fermats-eco.tail164998.ts.net:2543",
+            # Old AWS origin, kept until the cutover is done and the instance is retired.
             "https://plan.63-181-3-204.sslip.io",
             "http://localhost:2100",
             "http://127.0.0.1:2100",
@@ -51,7 +54,10 @@ def create_app() -> FastAPI:
     app.include_router(settings_router)
     app.include_router(history_router)
 
-    web_dir = Path("/web")
+    # In the container the web assets are mounted at /web; running natively for local dev
+    # they sit next to the backend in the repo. WEB_DIR overrides both.
+    web_dir = Path(os.getenv("WEB_DIR") or ("/web" if Path("/web").is_dir()
+                                            else Path(__file__).resolve().parents[2] / "web"))
     html_path = web_dir / "plan.html"
     static_dir = web_dir / "static"
     app.mount("/static", StaticFiles(directory=static_dir), name="static")

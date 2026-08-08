@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import math
 import sys
-from pymongo import ASCENDING
 
 from app.core.date_utils import (
     parse_date,
@@ -14,14 +13,16 @@ from app.core.date_utils import (
     tomorrow,
     yesterday,
 )
-from app.core.enums import Collection
 from app.core.errors import BusinessError
+from app.core.targets import TargetError, compute_targets, snapshot_from_settings
 from app.core.utils import choice_times
-from app.db.dal import DAL
-
-
-def date_key(date: str):
-    return {"date": date}
+from app.db.dal import (
+    DAL,
+    DayClosedError,
+    DayNotFoundError,
+    InvalidNumberError,
+    SettingsMissingError,
+)
 
 
 def _round2(n: float) -> float:
@@ -40,33 +41,14 @@ def _is_number(w) -> bool:
 
 
 class BL:
-    def __init__(
-            self,
-            mongo_uri: str,
-            mongo_db: str,
-            logger: logging.Logger
-    ):
+    def __init__(self, pg_dsn: str, logger: logging.Logger):
         self.logger = logger
-        self.dal = DAL(mongo_uri, mongo_db)
-        self._ensure_indexes()
-        self.logger.info("BL initialized mongo_db=%s", mongo_db)
+        self.dal = DAL(pg_dsn)
+        self.dal.ensure_schema()
+        self.logger.info("BL initialized (postgres)")
 
-    def _ensure_indexes(self):
-        # Enforce the data invariants at the DB level: unique date, and at most one open day.
-        # Guarded so a (already-clean) prod can't be crashed by index creation; if existing
-        # data ever violated these it would be logged instead of taking the app down.
-        try:
-            self.dal.create_index(
-                Collection.DAYS.value, [("date", ASCENDING)],
-                unique=True, name="uniq_date",
-            )
-            self.dal.create_index(
-                Collection.DAYS.value, [("day_closed", ASCENDING)],
-                unique=True, name="uniq_open_day",
-                partialFilterExpression={"day_closed": False},
-            )
-        except Exception:
-            self.logger.exception("Day index creation failed (continuing) — check for duplicate dates / multiple open days")
+    def close(self):
+        self.dal.close()
 
     def _recompute_meals_nutrition(self, meals: list[dict]) -> None:
         """Recompute every food's protein/fat/calories from the foods catalog, mirroring the
@@ -128,33 +110,23 @@ class BL:
     # Public API used by routers
 
     def get_foods(self):
-        sort = [
-            ("type", ASCENDING),
-            ("inner_type", ASCENDING),
-        ]
-
-        return self.dal.find_all(
-            collection=Collection.FOODS.value,
-            key={},
-            columns={"_id": 0},
-            sort=sort,
-        )
+        return self.dal.get_foods()
 
     def set_foods(self, foods: list[dict]):
-        # Refuse to wipe the catalog, and never leave it half-replaced: build the new set in a
-        # temp collection and atomically rename it over `foods` (renameCollection w/ dropTarget).
-        # If validation/insert fails, the live `foods` collection is untouched.
+        # Refuse to wipe the catalog. The replace runs in a single transaction, so a failure
+        # part-way leaves the live catalog untouched (the Postgres equivalent of the old
+        # build-in-a-temp-collection-then-rename trick).
         if not foods:
             raise BusinessError("Refusing to replace foods with an empty list")
         self.logger.info("Replace foods count=%s", len(foods))
-        swap = Collection.FOODS.value + "_swap"
-        self.dal.drop_collection(swap)
-        self.dal.insert_many(collection=swap, documents=foods)
-        self.dal.rename_collection(swap, Collection.FOODS.value, drop_target=True)
+        try:
+            self.dal.replace_foods(foods)
+        except InvalidNumberError as e:
+            # Surface the offending food/field to the user instead of storing a silent 0.
+            raise BusinessError(str(e))
 
     def get_day(self, date: str):
-        key = date_key(date)
-        day = self.get_day_dal(key)
+        day = self.dal.get_day(date)
 
         dt = parse_date(date)
         timezone_name = self.get_timezone_name()
@@ -162,13 +134,12 @@ class BL:
         if day is None and dt == today(timezone_name):
             self.logger.info("Auto end previous day because today requested and day missing date=%s", date)
             self.end_day_dal(format_date(prev_day(parse_date(date))))
-            day = self.get_day_dal(key)
+            day = self.dal.get_day(date)
 
         return day
 
     def set_day(self, date: str, day_doc: dict):
-        key = date_key(date)
-        self.validate_day_update(key)
+        self.validate_day_update(date)
 
         # Server-authoritative nutrition: recompute each food's macros from the catalog so the
         # stored numbers never depend on the client. Only ever applied here (the save path),
@@ -178,18 +149,17 @@ class BL:
             self._recompute_meals_nutrition(day_doc["meals"])
 
         self.logger.info("Set day date=%s", date)
-        update = {"$set": day_doc}
-
-        self.dal.update_one(
-            collection=Collection.DAYS.value,
-            key=key,
-            data=update,
-        )
+        try:
+            self.dal.save_day(date, day_doc)
+        except DayClosedError:
+            # Lost the race against a concurrent end_day: same user-facing error as the
+            # up-front check, so the client behaves identically either way.
+            raise BusinessError("Day Is Closed")
 
     def revert_day(self, open_day_date: str):
         self.logger.info("Revert day requested date=%s", open_day_date)
 
-        open_day = self.get_day_dal({"day_closed": False})
+        open_day = self.dal.get_open_day()
         if open_day is None:
             raise BusinessError("No open day found")
 
@@ -207,32 +177,18 @@ class BL:
 
         prev_date = format_date(prev_day(parse_date(actual_open_date)))
 
-        prev_doc = self.get_day_dal(date_key(prev_date))
-        if prev_doc is None:
+        if not self.dal.day_exists(prev_date):
             raise BusinessError("Previous day not found")
 
-        self.dal.delete_one(
-            collection=Collection.DAYS.value,
-            key=date_key(actual_open_date),
-        )
-
-        self.dal.update_one(
-            collection=Collection.DAYS.value,
-            key=date_key(prev_date),
-            data={
-                "$set": {"day_closed": False},
-                "$unset": {"nutrition": ""},
-            },
-        )
+        # One transaction: deleting the open day and reopening the previous one must not be
+        # separately committed, or a crash between them leaves zero open days with tomorrow
+        # already gone.
+        self.dal.revert_open_day(actual_open_date, prev_date)
 
         self.logger.info("Revert day done open_deleted=%s prev_reopened=%s", actual_open_date, prev_date)
 
     def get_settings(self):
-        return self.dal.find_one(
-            collection=Collection.SETTINGS.value,
-            key={},
-            columns={"_id": 0},
-        )
+        return self.dal.get_settings()
 
     def end_day(self, date: str):
         self.logger.info("End day requested date=%s", date)
@@ -243,7 +199,7 @@ class BL:
         self.end_day_dal(date)
 
     def get_open_day(self):
-        open_day = self.get_day_dal({"day_closed": False})
+        open_day = self.dal.get_open_day()
         if open_day is None:
             return None
 
@@ -253,79 +209,35 @@ class BL:
             self.logger.info("Auto end open day because it equals yesterday date=%s", yesterday_day)
             self.end_day_dal(yesterday_day)
 
-        return self.get_day_dal({"day_closed": False})
+        return self.dal.get_open_day()
 
     def get_weights(self):
-        return self.dal.find_all(
-            collection=Collection.DAYS.value,
-            key={},
-            columns={
-                "date": 1,
-                "weight": 1,
-                "_id": 0,
-            },
-        )
+        return self.dal.get_weights()
 
     # Helpers
 
-    def get_day_dal(self, key):
-        columns = {
-            "date": 1,
-            "meals": 1,
-            "weight": 1,
-            "day_closed": 1,
-            "_id": 0,
-        }
-
-        return self.dal.find_one(
-            collection=Collection.DAYS.value,
-            key=key,
-            columns=columns,
-        )
-
-    def end_day_dal(self, date: str):
-        self.logger.info("End day start date=%s", date)
-
-        key = date_key(date)
-        self.validate_day_update(key)
-
-        settings = self.get_settings()
-        if settings is None:
-            raise BusinessError("Settings missing in DB")
-
+    @staticmethod
+    def _end_day_compute(day: dict, settings: dict, group_foods: dict, date: str) -> dict:
+        """Pure: given the locked day, settings and group pools, produce everything the close
+        needs. No DB access — a second connection here would sit outside end_day_atomic's
+        transaction and reintroduce the race it exists to close."""
         groupsDict: dict[str, int] = {}
         for group in settings["groups"]:
             groupsDict[group["name"]] = group["new_day_amount"]
 
         tomorrowMeals = []
-        current_day = self.get_day_dal(key)
-        if current_day is None:
-            raise BusinessError("Day not found")
-
         proteinSum = 0.0
         fatSum = 0.0
         caloriesSum = 0.0
 
-        for meal in current_day["meals"]:
+        for meal in day["meals"]:
             if meal.get("meal_closed") is None:
                 meal["meal_closed"] = False
 
             if meal["name"] in groupsDict:
                 newDayAmount = groupsDict[meal["name"]]
                 if newDayAmount > 0:
-                    keyFoods = {
-                        "inner_type": meal["name"],
-                        "available": "Y",
-                    }
-
-                    columns = {"name": 1}
-                    groupFoods = self.dal.find_all(
-                        collection=Collection.FOODS.value,
-                        key=keyFoods,
-                        columns=columns,
-                    )
-
-                    randomFoods = choice_times(groupFoods, newDayAmount)
+                    randomFoods = choice_times(group_foods.get(meal["name"], []), newDayAmount)
 
                     meal["foods"] = []
                     for food in randomFoods:
@@ -355,72 +267,55 @@ class BL:
             meal_copy["meal_closed"] = False
             tomorrowMeals.append(meal_copy)
 
-        self.logger.info(
-            "Nutrition computed date=%s protein=%.2f fat=%.2f calories=%.2f",
-            date,
-            proteinSum,
-            fatSum,
-            caloriesSum,
-        )
+        # Freeze the goals alongside the totals, so editing settings later can never rewrite
+        # what this day was measured against.
+        targets = compute_targets(day.get("weight"), settings, parse_date(date))
 
-        update = {
-            "$set": {
-                "nutrition": {
-                    "protein": proteinSum,
-                    "fat": fatSum,
-                    "calories": caloriesSum,
-                },
-                "day_closed": True,
-            }
+        return {
+            "nutrition": {"protein": proteinSum, "fat": fatSum, "calories": caloriesSum},
+            "targets": targets,
+            "snapshot": snapshot_from_settings(settings),
+            "tomorrow_meals": tomorrowMeals,
         }
-        self.dal.update_one(
-            collection=Collection.DAYS.value,
-            key=key,
-            data=update,
-        )
+
+    def end_day_dal(self, date: str):
+        self.logger.info("End day start date=%s", date)
 
         tomorrow_date = format_date(next_day(parse_date(date)))
-        # Only create the next day if it doesn't already exist. end_day_dal is reached from
-        # three paths (manual End, auto-end in get_open_day, auto-end-prev in get_day); without
-        # this guard any of them running when tomorrow already exists inserts a duplicate-date
-        # document, leaving two "open" days and stranding the client on the wrong day.
-        existing_tomorrow = self.dal.find_one(
-            collection=Collection.DAYS.value,
-            key=date_key(tomorrow_date),
-            columns={"_id": 1},
+
+        # One transaction owns the whole thing: locking, reading, computing and writing. See
+        # DAL.end_day_atomic. Tomorrow is created in the same transaction and only when it
+        # doesn't already exist (end_day is reachable from three paths: manual End, auto-end
+        # in get_open_day, auto-end-prev in get_day).
+        try:
+            result = self.dal.end_day_atomic(
+                date,
+                tomorrow_date,
+                lambda day, settings, group_foods: self._end_day_compute(
+                    day, settings, group_foods, date
+                ),
+            )
+        except DayNotFoundError:
+            raise BusinessError("Day not found")
+        except SettingsMissingError:
+            raise BusinessError("Settings missing in DB")
+        except DayClosedError:
+            raise BusinessError("Day Is Closed")
+        except TargetError as e:
+            raise BusinessError(str(e))
+
+        self.logger.info(
+            "End day done date=%s tomorrow=%s created=%s",
+            date, tomorrow_date, result.get("created_tomorrow"),
         )
-        if existing_tomorrow is None:
-            tomorrow_day = date_key(tomorrow_date) | {
-                "meals": tomorrowMeals,
-                "weight": 0,
-                "day_closed": False,
-            }
-            self.dal.insert_one(
-                collection=Collection.DAYS.value,
-                document=tomorrow_day,
-            )
-            self.logger.info("End day done date=%s tomorrow_created=%s", date, tomorrow_date)
-        else:
-            self.logger.info(
-                "End day done date=%s tomorrow_already_exists=%s", date, tomorrow_date
-            )
 
     def get_timezone_name(self):
-        settings = self.dal.find_one(
-            collection=Collection.SETTINGS.value,
-            key={},
-            columns={"timezone_name": 1}
-        )
+        tz = self.dal.get_timezone_name()
+        if tz is None:
+            raise BusinessError("Settings missing in DB")
+        return tz
 
-        return settings["timezone_name"]
-
-    def validate_day_update(self, day_key):
-        columns = {"day_closed": 1}
-        day = self.dal.find_one(
-            collection=Collection.DAYS.value,
-            key=day_key,
-            columns=columns,
-        )
-
-        if day is not None and day.get("day_closed") is True:
+    def validate_day_update(self, date: str):
+        closed = self.dal.is_day_closed(date)
+        if closed is True:
             raise BusinessError("Day Is Closed")

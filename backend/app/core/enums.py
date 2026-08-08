@@ -6,7 +6,3 @@ class Status(str, Enum):
     ERROR = "ERROR"
 
 
-class Collection(str, Enum):
-    DAYS = "days"
-    FOODS = "foods"
-    SETTINGS = "settings"
