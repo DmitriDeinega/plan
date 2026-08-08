@@ -16,6 +16,14 @@
 #   --dump-dir DIR   where to write the mongoexport JSON (default: ./mongo-export)
 #   --keep-mongo     leave the Mongo container running afterwards (default: leave it alone)
 #   --dry-run        export + verify only; roll back instead of committing
+#   --from-ssh USER@HOST --ssh-key PATH
+#                    pull the export from a REMOTE host's Mongo container instead of a
+#                    local one. Use this when migrating onto a new machine while the old
+#                    server still holds the data.
+#   --skip-export    reuse the JSON already in --dump-dir (e.g. copied over by hand)
+#
+# Migrating onto a fresh box while the old server is still up:
+#   ./migrate_to_postgres.sh --from-ssh ec2-user@1.2.3.4 --ssh-key ~/.ssh/apps.pem
 
 set -euo pipefail
 
@@ -31,45 +39,66 @@ PG_PASSWORD="${POSTGRES_PASSWORD:-plan}"
 
 DUMP_DIR="$HERE/mongo-export"
 DRY_RUN=""
+FROM_SSH=""
+SSH_KEY=""
+SKIP_EXPORT=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dump-dir) DUMP_DIR="$2"; shift 2 ;;
     --dry-run)  DRY_RUN="--dry-run"; shift ;;
+    --from-ssh) FROM_SSH="$2"; shift 2 ;;
+    --ssh-key)  SSH_KEY="$2"; shift 2 ;;
+    --skip-export) SKIP_EXPORT=1; shift ;;
     --keep-mongo) shift ;;   # accepted for clarity; this script never stops Mongo
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
+
+# Run a command against whichever host holds Mongo.
+mongo_host_exec() {
+  if [ -n "$FROM_SSH" ]; then
+    ssh ${SSH_KEY:+-i "$SSH_KEY"} -o StrictHostKeyChecking=no "$FROM_SSH" "$@"
+  else
+    bash -c "$@"
+  fi
+}
 
 say() { printf '\n=== %s ===\n' "$1"; }
 
 # --- 0. sanity -------------------------------------------------------------
 say "Checking prerequisites"
 command -v docker >/dev/null || { echo "docker not found" >&2; exit 1; }
-if ! docker ps --format '{{.Names}}' | grep -qx "$MONGO_CONTAINER"; then
-  echo "Mongo container '$MONGO_CONTAINER' is not running - nothing to migrate from." >&2
-  exit 1
-fi
-echo "mongo container : $MONGO_CONTAINER"
+echo "mongo source    : ${FROM_SSH:-local}/$MONGO_CONTAINER"
 echo "target postgres : $PG_CONTAINER / $PG_DB"
 echo "dump dir        : $DUMP_DIR"
 
 # --- 1. export from Mongo (read-only) --------------------------------------
-say "Exporting collections from MongoDB"
 mkdir -p "$DUMP_DIR"
 
-# Discover collections rather than hardcoding, so any extra days_* backup is picked up.
-COLLECTIONS=$(docker exec "$MONGO_CONTAINER" mongosh "$MONGO_DB" --quiet --eval \
-  'db.getCollectionNames().filter(n => !n.startsWith("system.")).join("\n")')
+if [ -n "$SKIP_EXPORT" ]; then
+  say "Skipping export (--skip-export); using the JSON already in $DUMP_DIR"
+else
+  say "Exporting collections from MongoDB"
 
-echo "$COLLECTIONS" | while read -r c; do
-  [ -z "$c" ] && continue
-  docker exec "$MONGO_CONTAINER" mongoexport --db "$MONGO_DB" --collection "$c" \
-    --jsonArray --quiet > "$DUMP_DIR/$c.json"
-  n=$(docker exec "$MONGO_CONTAINER" mongosh "$MONGO_DB" --quiet --eval "db['$c'].countDocuments({})")
-  printf '  %-20s %s docs\n' "$c" "$n"
-done
+  if [ -z "$FROM_SSH" ] && ! docker ps --format '{{.Names}}' | grep -qx "$MONGO_CONTAINER"; then
+    echo "Mongo container '$MONGO_CONTAINER' is not running here." >&2
+    echo "If the data lives on another machine, use --from-ssh USER@HOST --ssh-key PATH." >&2
+    exit 1
+  fi
+
+  # Discover collections rather than hardcoding, so any extra days_* backup is picked up.
+  COLLECTIONS=$(mongo_host_exec "docker exec $MONGO_CONTAINER mongosh $MONGO_DB --quiet --eval 'db.getCollectionNames().filter(n => !n.startsWith(\"system.\")).join(\"\n\")'")
+
+  [ -n "$COLLECTIONS" ] || { echo "no collections found in $MONGO_DB" >&2; exit 1; }
+
+  for c in $COLLECTIONS; do
+    [ -z "$c" ] && continue
+    mongo_host_exec "docker exec $MONGO_CONTAINER mongoexport --db $MONGO_DB --collection $c --jsonArray --quiet" > "$DUMP_DIR/$c.json"
+    printf '  %-20s %s bytes\n' "$c" "$(wc -c < "$DUMP_DIR/$c.json" | tr -d ' ')"
+  done
+fi
 
 # The loader expects these five. Extra days_* backups are reported but not loaded,
 # because each archive needs an explicit label in ARCHIVES.
