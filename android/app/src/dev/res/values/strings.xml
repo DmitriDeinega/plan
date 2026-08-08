@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Overrides the main app_name for the dev flavor, so the launcher icon is
+         distinguishable from the prod build installed alongside it. -->
+    <string name="app_name">Plan DEV</string>
+</resources>

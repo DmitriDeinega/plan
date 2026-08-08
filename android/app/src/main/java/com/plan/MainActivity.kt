@@ -5,8 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Restaurant
@@ -32,6 +34,7 @@ import com.plan.ui.day.DayScreen
 import com.plan.ui.foods.FoodsScreen
 import com.plan.ui.settings.SettingsScreen
 import com.plan.ui.theme.PlanTheme
+import com.plan.ui.theme.Purple
 import com.plan.ui.weights.WeightsScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -83,6 +86,20 @@ private fun PlanTopBar() {
             fontSize = 20.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
+        // Non-prod builds label themselves, so a dev build talking to a local backend can
+        // never be mistaken for the real app. Mirrors the web's ENV_SUFFIX badge.
+        if (BuildConfig.APP_ENV != "PROD") {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                BuildConfig.APP_ENV,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .background(Purple.copy(alpha = 0.85f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
+            )
+        }
     }
 }
 

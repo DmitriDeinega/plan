@@ -22,7 +22,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 shrink + optimize. Compose leans on it heavily; without it the release build
+            // keeps most of the interpreted-path overhead that makes scrolling feel rough.
+            isMinifyEnabled = true
             // Sign release with the debug key so we can install it for real-world
             // performance testing (release sets debuggable=false -> far smoother Compose).
             signingConfig = signingConfigs.getByName("debug")
@@ -39,11 +41,19 @@ android {
             dimension = "env"
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            buildConfigField("String", "BASE_URL", "\"http://192.168.1.4:2100\"")
+            buildConfigField("String", "BASE_URL", "\"https://fermats-eco.tail164998.ts.net:2543\"")
+            // Shown next to the title so a dev build pointed at a local backend is never
+            // mistaken for the real one (the web app marks itself the same way via APP_ENV).
+            // The launcher label comes from src/dev/res/values/strings.xml.
+            buildConfigField("String", "APP_ENV", "\"DEV\"")
         }
         create("prod") {
             dimension = "env"
-            buildConfigField("String", "BASE_URL", "\"https://plan.63-181-3-204.sslip.io\"")
+            // Home server, reachable over Tailscale. The ts.net name has a real Let's Encrypt
+            // cert issued to Tailscale, so no custom trust config is needed — but the device
+            // must be on the tailnet for this host to resolve.
+            buildConfigField("String", "BASE_URL", "\"https://fermats-eco.tail164998.ts.net:2543\"")
+            buildConfigField("String", "APP_ENV", "\"PROD\"")
         }
     }
 
