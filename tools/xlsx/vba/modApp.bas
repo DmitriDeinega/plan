@@ -5,6 +5,18 @@ Public Sub InitApp()
     On Error GoTo CleanUp
     Application.ScreenUpdating = False
 
+    ' No API Route configured -> skip every server call. The address is deliberately left
+    ' blank in the committed workbook so it can be filled in per machine after copying the
+    ' folder; without this guard each of the three loads below would fail and raise an
+    ' error dialog on open.
+    If Not modApi.IsApiConfigured() Then
+        Worksheets("Plan").Activate
+        ActiveWindow.ScrollRow = 1
+        ActiveWindow.ScrollColumn = 1
+        ThisWorkbook.Saved = True
+        GoTo CleanUp
+    End If
+
     modDBSettings.GetDBSettings
     modFoods.GetFoods
     modDay.GetOpenDay

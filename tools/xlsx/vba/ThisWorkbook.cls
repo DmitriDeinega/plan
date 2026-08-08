@@ -15,12 +15,19 @@ Private Sub Workbook_Open()
 End Sub
 
 Private Sub Workbook_SheetActivate(ByVal Sh As Object)
+    ' Same reason as Workbook_Open: with no API Route there is nothing to fetch.
+    If Not modApi.IsApiConfigured() Then Exit Sub
+
     If Sh.name = "Weights" Then
         modHistory.GetWeights
     End If
 End Sub
 
 Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
+    ' Saving pushes the sheet to the server. Unconfigured, that is a guaranteed failure on
+    ' every Ctrl+S, so skip it and let the file save normally.
+    If Not modApi.IsApiConfigured() Then Exit Sub
+
     If ActiveSheet.name = "Plan" Then
         modDay.SetDay
     ElseIf ActiveSheet.name = "Foods" Then
